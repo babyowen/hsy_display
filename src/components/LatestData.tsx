@@ -76,6 +76,18 @@ export default function LatestData() {
     )
   }
 
+  // 获取最新的更新时间
+  const getLatestUpdateTime = (data: ProcessedData[]) => {
+    if (data.length === 0) return null
+    const latestTime = Math.max(...data.map(item => item.updatetime))
+    return new Date(latestTime).toLocaleString('zh-CN', {
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric'
+    })
+  }
+
   // 处理数据：按时间和类型分组，只保留每组最新的数据
   const processedData = response.data.data.items.reduce((acc: { [key: string]: ProcessedData }, item: any) => {
     const key = `${item.fields.datetime}_${item.fields.type}`
@@ -112,6 +124,8 @@ export default function LatestData() {
     .filter(item => item.datetime > Date.now()) // 只保留未来的数据
     .sort((a, b) => a.datetime - b.datetime)
 
+  const latestUpdateTime = getLatestUpdateTime(sortedData)
+
   // 使用新的 gridCols 逻辑
   const gridCols = getGridCols(sortedData.length)
 
@@ -120,6 +134,11 @@ export default function LatestData() {
       <div className="flex items-center gap-2">
         <CloudSun className="w-7 h-7 text-blue-500" />
         <h2 className="text-2xl font-semibold text-gray-800">近日预测</h2>
+        {latestUpdateTime && (
+          <span className="text-sm text-gray-500 ml-2">
+            (更新于 {latestUpdateTime})
+          </span>
+        )}
       </div>
       <div className={`grid grid-cols-1 ${gridCols} gap-4`}>
         {sortedData.map((item) => (
