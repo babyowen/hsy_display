@@ -39,6 +39,9 @@ export default function LatestData() {
       <div className="flex items-center gap-2">
         <div className="w-7 h-7 bg-blue-200 rounded-full" />
         <div className="h-8 w-48 bg-gray-200 rounded" />
+        <div className="animate-fade-in-out text-gray-400 ml-2">
+          加载中...
+        </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
