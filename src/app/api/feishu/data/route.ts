@@ -6,6 +6,32 @@ interface FeishuResponse {
   data: unknown;
 }
 
+// 添加请求参数的类型定义
+interface RequestParams {
+  path: {
+    app_token: string;
+    table_id: string;
+  };
+  data: {
+    view_id?: string;
+    field_names?: string[];
+    sort?: Array<{
+      field_name?: string;
+      desc?: boolean;
+    }>;
+    filter?: {
+      conjunction?: "or" | "and";
+      conditions?: Array<{
+        field_name: string;
+        operator: "is" | "isNot" | "contains" | "doesNotContain" | "isEmpty" | "isNotEmpty";
+        value?: string[];
+      }>;
+    };
+    page_token?: string;
+    page_size?: number;
+  }
+}
+
 async function getTenantToken() {
   try {
     console.log('Requesting tenant token with:', {
@@ -39,17 +65,8 @@ async function getTenantToken() {
 }
 
 export async function GET() {
-  let requestParams;
-
   try {
     const tenantToken = await getTenantToken();
-    console.log('Got tenant token:', tenantToken);
-
-    console.log('Environment variables:', {
-      APP_TOKEN: process.env.FEISHU_APP_TOKEN,
-      TABLE_ID: process.env.TABLE_ID,
-      VIEW_ID: process.env.VIEW_ID
-    });
 
     const client = new Client({
       appId: process.env.FEISHU_APP_ID,
@@ -57,42 +74,35 @@ export async function GET() {
       disableTokenCache: true
     });
 
-    requestParams = {
+    const requestParams: RequestParams = {
       path: {
         app_token: process.env.FEISHU_APP_TOKEN!,
         table_id: process.env.TABLE_ID!,
       },
-      params: {
-        view_id: process.env.VIEW_ID,
-      },
       data: {
+        view_id: process.env.VIEW_ID,
         page_size: 100,
         field_names: ['datetime', 'type', 'hsysz', 'hsypj', 'qrjsz', 'kqzl', 'updatetime'],
         filter: {
-          conjunction: 'or',
+          conjunction: 'or' as const,
           conditions: [
             {
               field_name: 'datetime',
               operator: 'is',
               value: ['Today']
-            },
-            {
-              field_name: 'datetime',
-              operator: 'is',
-              value: ['Tomorrow']
             }
           ]
         },
         sort: [
           {
             field_name: 'datetime',
-            order: 'asc'
+            desc: true
           }
         ]
       }
     };
 
-    console.log('Sending request with params:', JSON.stringify(requestParams, null, 2));
+    console.log('Request params:', JSON.stringify(requestParams, null, 2));
 
     const response = await client.bitable.appTableRecord.search(requestParams, {
       headers: {
@@ -100,34 +110,17 @@ export async function GET() {
       }
     });
 
-    console.log('Raw API Response:', response);
-    console.log('Stringified API Response:', JSON.stringify(response, null, 2));
-
     return NextResponse.json({ data: response });
   } catch (error: any) {
-    console.error('Detailed Error:', {
-      message: error.message,
-      name: error.name,
-      stack: error.stack,
-      response: error.response?.data,
-      config: error.config
-    });
-
-    if (error.isAxiosError) {
-      console.log('Axios Error Details:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        headers: error.response?.headers,
-        data: error.response?.data
-      });
+    console.error('Feishu API Error:', error);
+    if (error.response?.data) {
+      console.error('Error Response Data:', error.response.data);
     }
-
     return NextResponse.json(
       { 
         error: '获取数据失败', 
         details: error instanceof Error ? error.message : String(error),
-        response: error.response?.data,
-        requestParams
+        errorData: error.response?.data
       }, 
       { status: 500 }
     );

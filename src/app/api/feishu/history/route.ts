@@ -32,6 +32,31 @@ interface HistoryResponse {
   data: unknown;
 }
 
+interface RequestParams {
+  path: {
+    app_token: string;
+    table_id: string;
+  };
+  data: {
+    view_id?: string;
+    field_names?: string[];
+    sort?: Array<{
+      field_name?: string;
+      desc?: boolean;
+    }>;
+    filter?: {
+      conjunction?: "or" | "and";
+      conditions?: Array<{
+        field_name: string;
+        operator: "is" | "isNot" | "contains" | "doesNotContain" | "isEmpty" | "isNotEmpty";
+        value?: string[];
+      }>;
+    };
+    page_token?: string;
+    page_size?: number;
+  }
+}
+
 export async function GET() {
   try {
     const tenantToken = await getTenantToken();
@@ -42,7 +67,7 @@ export async function GET() {
       disableTokenCache: true
     });
 
-    const requestParams = {
+    const requestParams: RequestParams = {
       path: {
         app_token: process.env.FEISHU_APP_TOKEN!,
         table_id: process.env.TABLE_ID!,
@@ -52,12 +77,12 @@ export async function GET() {
         page_size: 100,
         field_names: ['datetime', 'type', 'hsysz', 'hsypj', 'qrjsz', 'kqzl', 'updatetime'],
         filter: {
-          conjunction: "and" as const,
+          conjunction: 'and' as const,
           conditions: [
             {
               field_name: 'datetime',
-              operator: "is" as const,
-              value: ["CurrentWeek"]
+              operator: 'is',
+              value: ['CurrentWeek']
             }
           ]
         },
