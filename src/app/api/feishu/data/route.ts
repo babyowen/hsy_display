@@ -66,6 +66,15 @@ async function getTenantToken() {
 
 export async function GET() {
   try {
+    // 检查环境变量
+    console.log('Environment check:', {
+      hasAppId: !!process.env.FEISHU_APP_ID,
+      hasAppSecret: !!process.env.FEISHU_APP_SECRET,
+      hasAppToken: !!process.env.FEISHU_APP_TOKEN,
+      hasTableId: !!process.env.TABLE_ID,
+      hasViewId: !!process.env.VIEW_ID,
+    });
+
     const tenantToken = await getTenantToken();
     console.log('Got tenant token:', tenantToken ? '成功获取' : '获取失败');
 

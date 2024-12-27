@@ -86,10 +86,16 @@ const LatestData: React.FC<Props> = ({ data = [] }) => {
 
   // 处理数据：按时间和类型分组，只保留每组最新的数据
   const processedData = response.data.data.items.reduce((acc: { [key: string]: ProcessedData }, item: any) => {
+    console.log('Raw datetime:', {
+      datetime: item.fields.datetime,
+      type: typeof item.fields.datetime,
+      sample: new Date(item.fields.datetime).toLocaleString()
+    });
+    
     const key = `${item.fields.datetime}_${item.fields.type}`
     if (!acc[key] || acc[key].updatetime < item.fields.updatetime) {
       acc[key] = {
-        datetime: item.fields.datetime,
+        datetime: item.fields.datetime,  // 保持原始格式
         type: item.fields.type,
         hsysz: item.fields.hsysz,
         hsypj: item.fields.hsypj[0]?.text || '无评价',
@@ -104,13 +110,14 @@ const LatestData: React.FC<Props> = ({ data = [] }) => {
   // 转换为数组并按时间排序
   const sortedData = (Object.values(processedData) as Array<ProcessedData>)
     .filter(item => {
-      // 添加调试日志
-      console.log('Filtering item:', {
-        datetime: item.datetime,
-        now: Date.now(),
-        date: new Date(item.datetime).toISOString()
+      const now = Date.now();
+      console.log('Comparing times:', {
+        itemTime: item.datetime,
+        nowTime: now,
+        itemDate: new Date(item.datetime).toLocaleString(),
+        nowDate: new Date(now).toLocaleString()
       });
-      return item.datetime > Date.now()
+      return item.datetime > now;
     })
     .sort((a, b) => a.datetime - b.datetime)
 

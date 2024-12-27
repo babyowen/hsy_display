@@ -11,6 +11,10 @@ export default function Header() {
           priority
           className="object-cover"
           sizes="100vw"
+          onError={(e) => {
+            console.error('Image load error:', e);
+            e.currentTarget.src = '/images/cover/fallback.jpg';
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-transparent" />
       </div>
