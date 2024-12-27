@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
 import { Client } from '@larksuiteoapi/node-sdk'
 
+interface FeishuResponse {
+  code: number;
+  data: unknown;
+}
+
 async function getTenantToken() {
   try {
     console.log('Requesting tenant token with:', {

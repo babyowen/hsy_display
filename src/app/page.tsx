@@ -1,6 +1,7 @@
+import React from 'react'
 import LatestData from '@/components/LatestData'
-import Description from '@/components/Description'
 import DataTable from '@/components/DataTable'
+import Description from '@/components/Description'
 import Header from '@/components/Header'
 
 export default function Home() {

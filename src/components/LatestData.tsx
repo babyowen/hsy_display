@@ -1,7 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
-import type { SunsetData } from '@/lib/feishu'
-import { SunMedium, Sunrise, Sunset, CloudSun, Wind } from 'lucide-react'
+import React from 'react'
 import useSWR from 'swr'
 import { fetcher } from '@/lib/utils'
 
@@ -30,8 +28,30 @@ function getQrjszColor(value: number): string {
   return 'text-green-400'
 }
 
-export default function LatestData() {
-  const { data: response, error } = useSWR<any>('/api/feishu/data', fetcher)
+// 为 any 类型添加具体的接口定义
+interface SunsetDataType {
+  // 添加你的数据类型定义
+  id: string;
+  // ... 其他字段
+}
+
+// 修改接口定义，使 data 属性可选
+interface Props {
+  data?: SunsetDataType[];
+}
+
+// 添加响应类型
+interface FeishuResponse {
+  data: {
+    data: {
+      items: any[] // 或者定义更具体的类型
+    }
+  }
+}
+
+// 修改组件中的 any 类型
+const LatestData: React.FC<Props> = ({ data = [] }) => {
+  const { data: response, error } = useSWR<FeishuResponse>('/api/feishu/data', fetcher)
   
   if (error) return <div className="text-red-500">加载失败</div>
   if (!response) return (
@@ -66,7 +86,7 @@ export default function LatestData() {
   if (error) {
     return (
       <div className="p-4 bg-red-50 text-red-500 rounded-lg">
-        获取数据失败: {error}
+        获取数��失败: {error}
       </div>
     )
   }
@@ -108,6 +128,13 @@ export default function LatestData() {
     return acc
   }, {})
 
+  // 转换为数组并按时间排序
+  const sortedData = (Object.values(processedData) as Array<ProcessedData>)
+    .filter(item => item.datetime > Date.now()) // 只保留未来的数据
+    .sort((a, b) => a.datetime - b.datetime)
+
+  const latestUpdateTime = getLatestUpdateTime(sortedData)
+
   // 修改这部分：根据数据条数动态设置网格列数
   const getGridCols = (count: number) => {
     switch(count) {
@@ -121,13 +148,6 @@ export default function LatestData() {
         return 'md:grid-cols-4'
     }
   }
-
-  // 转换为数组并按时间排序
-  const sortedData = Object.values(processedData)
-    .filter(item => item.datetime > Date.now()) // 只保留未来的数据
-    .sort((a, b) => a.datetime - b.datetime)
-
-  const latestUpdateTime = getLatestUpdateTime(sortedData)
 
   // 使用新的 gridCols 逻辑
   const gridCols = getGridCols(sortedData.length)
@@ -206,4 +226,6 @@ export default function LatestData() {
       </div>
     </div>
   )
-} 
+}
+
+export default LatestData 
