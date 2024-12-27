@@ -88,14 +88,14 @@ const LatestData: React.FC<Props> = ({ data = [] }) => {
   const processedData = response.data.data.items.reduce((acc: { [key: string]: ProcessedData }, item: any) => {
     console.log('Raw datetime:', {
       datetime: item.fields.datetime,
-      type: typeof item.fields.datetime,
-      sample: new Date(item.fields.datetime).toLocaleString()
+      humanReadable: new Date(item.fields.datetime).toLocaleString(),
+      now: new Date().toLocaleString()
     });
     
     const key = `${item.fields.datetime}_${item.fields.type}`
     if (!acc[key] || acc[key].updatetime < item.fields.updatetime) {
       acc[key] = {
-        datetime: item.fields.datetime,  // 保持原始格式
+        datetime: Number(item.fields.datetime), // 确保是数字类型
         type: item.fields.type,
         hsysz: item.fields.hsysz,
         hsypj: item.fields.hsypj[0]?.text || '无评价',
@@ -110,14 +110,13 @@ const LatestData: React.FC<Props> = ({ data = [] }) => {
   // 转换为数组并按时间排序
   const sortedData = (Object.values(processedData) as Array<ProcessedData>)
     .filter(item => {
-      const now = Date.now();
-      console.log('Comparing times:', {
-        itemTime: item.datetime,
-        nowTime: now,
-        itemDate: new Date(item.datetime).toLocaleString(),
-        nowDate: new Date(now).toLocaleString()
+      const now = Date.now(); // 当前时间的毫秒时间戳
+      console.log('Time comparison:', {
+        itemTime: new Date(item.datetime).toLocaleString(),
+        nowTime: new Date(now).toLocaleString(),
+        isInFuture: item.datetime > now
       });
-      return item.datetime > now;
+      return item.datetime > now; // 直接比较毫秒时间戳
     })
     .sort((a, b) => a.datetime - b.datetime)
 
