@@ -67,6 +67,7 @@ async function getTenantToken() {
 export async function GET() {
   try {
     const tenantToken = await getTenantToken();
+    console.log('Got tenant token:', tenantToken ? '成功获取' : '获取失败');
 
     const client = new Client({
       appId: process.env.FEISHU_APP_ID,
@@ -110,12 +111,16 @@ export async function GET() {
       }
     });
 
+    console.log('Feishu API Response:', JSON.stringify(response, null, 2));
     return NextResponse.json({ data: response });
   } catch (error: any) {
-    console.error('Feishu API Error:', error);
-    if (error.response?.data) {
-      console.error('Error Response Data:', error.response.data);
-    }
+    console.error('Detailed Error:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      response: error.response?.data,
+    });
+
     return NextResponse.json(
       { 
         error: '获取数据失败', 

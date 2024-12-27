@@ -54,48 +54,20 @@ interface FeishuResponse {
 const LatestData: React.FC<Props> = ({ data = [] }) => {
   const { data: response, error } = useSWR<FeishuResponse>('/api/feishu/data', fetcher)
   
-  if (error) return <div className="text-red-500">加载失败</div>
-  if (!response) return (
-    <div className="space-y-6 animate-pulse">
-      <div className="flex items-center gap-2">
-        <div className="w-7 h-7 bg-blue-200 rounded-full" />
-        <div className="h-8 w-48 bg-gray-200 rounded" />
-        <div className="animate-fade-in-out text-gray-400 ml-2">
-          加载中...
-        </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[...Array(4)].map((_, i) => (
-          <div 
-            key={i}
-            className="bg-white shadow-lg rounded-lg p-6 border border-gray-200"
-          >
-            <div className="space-y-4">
-              <div className="h-4 bg-gray-200 rounded w-3/4" />
-              <div className="h-6 bg-gray-200 rounded w-1/2" />
-              <div className="space-y-2">
-                <div className="h-4 bg-gray-200 rounded w-full" />
-                <div className="h-4 bg-gray-200 rounded w-5/6" />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-  
+  // 添加调试日志
+  console.log('Response:', response);
+  console.log('Error:', error);
+
   if (error) {
-    return (
-      <div className="p-4 bg-red-50 text-red-500 rounded-lg">
-        获取数据失败: {error}
-      </div>
-    )
+    console.error('Feishu API Error:', error);
+    return <div className="text-red-500">加载失败: {error.toString()}</div>
   }
 
-  if (!response.data?.data?.items || response.data.data.items.length === 0) {
+  if (!response?.data?.data?.items) {
+    console.log('No data in response:', response);
     return (
       <div className="p-4 bg-yellow-50 text-yellow-600 rounded-lg">
-        暂无数据
+        暂无数据 (Response: {JSON.stringify(response)})
       </div>
     )
   }
@@ -131,7 +103,15 @@ const LatestData: React.FC<Props> = ({ data = [] }) => {
 
   // 转换为数组并按时间排序
   const sortedData = (Object.values(processedData) as Array<ProcessedData>)
-    .filter(item => item.datetime > Date.now()) // 只保留未来的数据
+    .filter(item => {
+      // 添加调试日志
+      console.log('Filtering item:', {
+        datetime: item.datetime,
+        now: Date.now(),
+        date: new Date(item.datetime).toISOString()
+      });
+      return item.datetime > Date.now()
+    })
     .sort((a, b) => a.datetime - b.datetime)
 
   const latestUpdateTime = getLatestUpdateTime(sortedData)
