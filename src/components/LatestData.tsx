@@ -52,22 +52,54 @@ interface FeishuResponse {
 
 // 修改组件中的 any 类型
 const LatestData: React.FC<Props> = ({ data = [] }) => {
-  const { data: response, error } = useSWR<FeishuResponse>('/api/feishu/data', fetcher)
+  const { data: response, error, isLoading } = useSWR<FeishuResponse>('/api/feishu/data', fetcher)
   
-  // 添加调试日志
-  console.log('Response:', response);
+  // 添加详细的调试日志
+  console.log('Response:', JSON.stringify(response, null, 2));
   console.log('Error:', error);
+  console.log('Loading:', isLoading);
 
   if (error) {
     console.error('Feishu API Error:', error);
     return <div className="text-red-500">加载失败: {error.toString()}</div>
   }
 
+  // 显示加载状态
+  if (isLoading || !response) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 bg-blue-200 rounded-full" />
+          <div className="h-8 w-48 bg-gray-200 rounded" />
+          <div className="animate-fade-in-out text-gray-400 ml-2">
+            正在读取...
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div 
+              key={i}
+              className="bg-white shadow-lg rounded-lg p-6 border border-gray-200"
+            >
+              <div className="space-y-4">
+                <div className="h-4 bg-gray-200 rounded w-3/4" />
+                <div className="h-6 bg-gray-200 rounded w-1/2" />
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-full" />
+                  <div className="h-4 bg-gray-200 rounded w-5/6" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   if (!response?.data?.data?.items) {
-    console.log('No data in response:', response);
     return (
       <div className="p-4 bg-yellow-50 text-yellow-600 rounded-lg">
-        暂无数据 (Response: {JSON.stringify(response)})
+        暂无数据
       </div>
     )
   }
@@ -86,11 +118,12 @@ const LatestData: React.FC<Props> = ({ data = [] }) => {
 
   // 处理数据：按时间和类型分组，只保留每组最新的数据
   const processedData = response.data.data.items.reduce((acc: { [key: string]: ProcessedData }, item: any) => {
-    console.log('Raw datetime:', {
+    console.log('Processing item:', JSON.stringify({
       datetime: item.fields.datetime,
       humanReadable: new Date(item.fields.datetime).toLocaleString(),
-      now: new Date().toLocaleString()
-    });
+      now: new Date().toLocaleString(),
+      type: item.fields.type
+    }, null, 2));
     
     const key = `${item.fields.datetime}_${item.fields.type}`
     if (!acc[key] || acc[key].updatetime < item.fields.updatetime) {
@@ -110,15 +143,27 @@ const LatestData: React.FC<Props> = ({ data = [] }) => {
   // 转换为数组并按时间排序
   const sortedData = (Object.values(processedData) as Array<ProcessedData>)
     .filter(item => {
-      const now = Date.now(); // 当前时间的毫秒时间戳
-      console.log('Time comparison:', {
-        itemTime: new Date(item.datetime).toLocaleString(),
-        nowTime: new Date(now).toLocaleString(),
-        isInFuture: item.datetime > now
-      });
-      return item.datetime > now; // 直接比较毫秒时间戳
+      const itemDate = new Date(item.datetime);
+      const now = new Date();
+      
+      // 比较完整的时间戳，而不是只比较日期
+      console.log('Comparing times:', JSON.stringify({
+        itemDateTime: itemDate.toLocaleString(),
+        nowDateTime: now.toLocaleString(),
+        isInFuture: itemDate > now
+      }, null, 2));
+      
+      // 只显示未来的时间
+      return itemDate > now;
     })
-    .sort((a, b) => a.datetime - b.datetime)
+    .sort((a, b) => {
+      // 先按日期排序，再按类型排序（日出在前，日落在后）
+      const dateCompare = a.datetime - b.datetime;
+      if (dateCompare === 0) {
+        return a.type === '日出' ? -1 : 1;
+      }
+      return dateCompare;
+    });
 
   const latestUpdateTime = getLatestUpdateTime(sortedData)
 

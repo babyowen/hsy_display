@@ -99,14 +99,14 @@ export async function GET() {
             {
               field_name: 'datetime',
               operator: 'is',
-              value: ['Today']
+              value: ['Tomorrow', 'ThisWeek', 'NextWeek']
             }
           ]
         },
         sort: [
           {
             field_name: 'datetime',
-            desc: true
+            desc: false
           }
         ]
       }
