@@ -2,6 +2,7 @@
 import React from 'react'
 import useSWR from 'swr'
 import { fetcher } from '@/lib/utils'
+import { SunMedium, Sunrise, Sunset, CloudSun, Wind } from 'lucide-react'
 
 interface ProcessedData {
   datetime: number
@@ -86,7 +87,7 @@ const LatestData: React.FC<Props> = ({ data = [] }) => {
   if (error) {
     return (
       <div className="p-4 bg-red-50 text-red-500 rounded-lg">
-        获取数��失败: {error}
+        获取数据失败: {error}
       </div>
     )
   }
