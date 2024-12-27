@@ -1,6 +1,6 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { formatDate, fetcher } from '@/lib/utils'
+import React from 'react'
+import { fetcher } from '@/lib/utils'
 import useSWR from 'swr'
 
 interface HistoryData {
@@ -13,8 +13,24 @@ interface HistoryData {
   updatetime: number
 }
 
-export default function DataTable() {
-  const { data: response, error } = useSWR<any>('/api/feishu/history', fetcher)
+interface DataItem {
+  id: string;
+}
+
+interface Props {
+  data?: DataItem[];
+}
+
+interface FeishuResponse {
+  data: {
+    data: {
+      items: any[]
+    }
+  }
+}
+
+const DataTable: React.FC<Props> = ({ data = [] }) => {
+  const { data: response, error } = useSWR<FeishuResponse>('/api/feishu/history', fetcher)
   
   if (error) return <div className="text-red-500">加载失败</div>
   if (!response) return (
@@ -46,7 +62,7 @@ export default function DataTable() {
   }, {})
 
   // 转换为数组并按时间倒序排列，只显示过去的数据
-  const sortedData = Object.values(processedData)
+  const sortedData = (Object.values(processedData) as Array<HistoryData>)
     .filter(item => item.datetime <= Date.now())
     .sort((a, b) => b.datetime - a.datetime)
 
@@ -148,4 +164,6 @@ export default function DataTable() {
       </div>
     </div>
   )
-} 
+}
+
+export default DataTable 

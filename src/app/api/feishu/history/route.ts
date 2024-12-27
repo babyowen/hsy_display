@@ -27,6 +27,11 @@ async function getTenantToken() {
   }
 }
 
+interface HistoryResponse {
+  code: number;
+  data: unknown;
+}
+
 export async function GET() {
   try {
     const tenantToken = await getTenantToken();
@@ -42,10 +47,8 @@ export async function GET() {
         app_token: process.env.FEISHU_APP_TOKEN!,
         table_id: process.env.TABLE_ID!,
       },
-      params: {
-        view_id: process.env.VIEW_ID,
-      },
       data: {
+        view_id: process.env.VIEW_ID,
         page_size: 100,
         field_names: ['datetime', 'type', 'hsysz', 'hsypj', 'qrjsz', 'kqzl', 'updatetime'],
         filter: {
@@ -53,7 +56,7 @@ export async function GET() {
           conditions: [
             {
               field_name: 'datetime',
-              operator: 'is',
+              operator: "is" as const,
               value: ["CurrentWeek"]
             }
           ]
@@ -61,7 +64,7 @@ export async function GET() {
         sort: [
           {
             field_name: 'datetime',
-            order: 'desc' as const
+            desc: true
           }
         ]
       }
