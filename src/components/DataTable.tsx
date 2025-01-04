@@ -4,13 +4,14 @@ import { fetcher } from '@/lib/utils'
 import useSWR from 'swr'
 
 interface HistoryData {
-  datetime: number
-  type: string
-  hsysz: number
-  hsypj: string
-  qrjsz: number
-  kqzl: string
-  updatetime: number
+  record_id: string;
+  datetime: number;
+  type: string;
+  hsysz: number;
+  hsypj: string;
+  qrjsz: number;
+  kqzl: string;
+  updatetime: number;
 }
 
 interface DataItem {
@@ -45,26 +46,45 @@ const DataTable: React.FC<Props> = ({ data = [] }) => {
   )
   
   // 处理数据：按时间和类型分组，只保留每组最新的数据
-  const processedData = response.data.data.items.reduce((acc: { [key: string]: HistoryData }, item: any) => {
-    const key = `${item.fields.datetime}_${item.fields.type}`
-    if (!acc[key] || acc[key].updatetime < item.fields.updatetime) {
-      acc[key] = {
+  const processData = (items: any[]) => {
+    if (!items?.length) return [];
+    
+    const now = new Date();
+    
+    // 使用 Map 按时间和类型去重，保留最新的记录
+    const uniqueMap = new Map();
+    
+    items.forEach(item => {
+      const key = `${item.fields.datetime}-${item.fields.type}`;
+      const itemDate = new Date(item.fields.datetime);
+      
+      // 只处理历史数据
+      if (itemDate > now) {
+        return;
+      }
+      
+      const existingItem = uniqueMap.get(key);
+      if (!existingItem || existingItem.fields.updatetime < item.fields.updatetime) {
+        uniqueMap.set(key, item);
+      }
+    });
+
+    // 转换为数组并排序
+    return Array.from(uniqueMap.values())
+      .map(item => ({
+        record_id: item.record_id, // 添加 record_id
         datetime: item.fields.datetime,
         type: item.fields.type,
-        hsysz: item.fields.hsysz,
+        hsysz: parseFloat(item.fields.hsysz) || 0,
         hsypj: item.fields.hsypj[0]?.text || '无评价',
-        qrjsz: item.fields.qrjsz,
+        qrjsz: parseFloat(item.fields.qrjsz) || 0,
         kqzl: item.fields.kqzl[0]?.text || '无评价',
         updatetime: item.fields.updatetime
-      }
-    }
-    return acc
-  }, {})
+      }))
+      .sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime());
+  };
 
-  // 转换为数组并按时间倒序排列，只显示过去的数据
-  const sortedData = (Object.values(processedData) as Array<HistoryData>)
-    .filter(item => item.datetime <= Date.now())
-    .sort((a, b) => b.datetime - a.datetime)
+  const sortedData = processData(response.data.data.items);
 
   // 如果没有历史数据，显示提示信息
   if (sortedData.length === 0) {
@@ -106,8 +126,11 @@ const DataTable: React.FC<Props> = ({ data = [] }) => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {sortedData.map((item) => (
-              <tr key={`${item.datetime}_${item.type}`} className="hover:bg-gray-50">
+            {sortedData.map((item, index) => (
+              <tr 
+                key={`${item.record_id || index}`} 
+                className="hover:bg-gray-50"
+              >
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {new Date(item.datetime).toLocaleString('zh-CN', {
                     month: 'numeric',

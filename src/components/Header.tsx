@@ -9,7 +9,7 @@ export default function Header() {
           src="/images/cover/sunset.jpg"
           alt="南京火烧云"
           fill
-          priority
+          priority={false}
           className="object-cover"
           sizes="100vw"
         />

@@ -1,9 +1,29 @@
 import { NextResponse } from 'next/server'
 import { Client } from '@larksuiteoapi/node-sdk'
 
+interface FeishuField {
+  datetime: number;  // 确保这是数字类型
+  type: string;
+  hsysz: number;
+  hsypj: Array<{ text: string }>;
+  qrjsz: number;
+  kqzl: Array<{ text: string }>;
+  updatetime: number;
+}
+
+interface FeishuRecord {
+  fields: FeishuField;
+  record_id: string;
+}
+
 interface FeishuResponse {
   code: number;
-  data: unknown;
+  data: {
+    data: {
+      items: FeishuRecord[];
+      has_more: boolean;
+    };
+  };
 }
 
 // 添加请求参数的类型定义
@@ -66,15 +86,6 @@ async function getTenantToken() {
 
 export async function GET() {
   try {
-    // 检查环境变量
-    console.log('Environment check:', {
-      hasAppId: !!process.env.FEISHU_APP_ID,
-      hasAppSecret: !!process.env.FEISHU_APP_SECRET,
-      hasAppToken: !!process.env.FEISHU_APP_TOKEN,
-      hasTableId: !!process.env.TABLE_ID,
-      hasViewId: !!process.env.VIEW_ID,
-    });
-
     const tenantToken = await getTenantToken();
     console.log('Got tenant token:', tenantToken ? '成功获取' : '获取失败');
 
@@ -82,6 +93,20 @@ export async function GET() {
       appId: process.env.FEISHU_APP_ID,
       appSecret: process.env.FEISHU_APP_SECRET,
       disableTokenCache: true
+    });
+
+    // 获取当前时间和未来7天的时间范围
+    const now = new Date();
+    const future = new Date(now);
+    future.setDate(now.getDate() + 7);
+
+    // 格式化时间为 ISO 字符串
+    const nowStr = now.toISOString();
+    const futureStr = future.toISOString();
+
+    console.log('Time range:', {
+      now: nowStr,
+      future: futureStr
     });
 
     const requestParams: RequestParams = {
@@ -94,12 +119,12 @@ export async function GET() {
         page_size: 100,
         field_names: ['datetime', 'type', 'hsysz', 'hsypj', 'qrjsz', 'kqzl', 'updatetime'],
         filter: {
-          conjunction: 'or' as const,
+          conjunction: 'and' as const,
           conditions: [
             {
               field_name: 'datetime',
-              operator: 'is',
-              value: ['Tomorrow', 'ThisWeek', 'NextWeek']
+              operator: 'contains',
+              value: [nowStr.split('T')[0]]  // 使用当前日期作为起始点
             }
           ]
         },
@@ -118,23 +143,49 @@ export async function GET() {
       headers: {
         'Authorization': `Bearer ${tenantToken}`
       }
+    }) as FeishuResponse;
+
+    // 打印完整的响应数据
+    console.log('Full API response:', JSON.stringify(response, null, 2));
+
+    if (!response.data.data?.items?.length) {
+      console.log('No items found in response');
+      return NextResponse.json({ data: { items: [] } });
+    }
+
+    // 过滤出未来的数据
+    const futureItems = response.data.data.items.filter(item => {
+      const itemDate = new Date(item.fields.datetime);
+      return itemDate > now && itemDate <= future;
     });
 
-    console.log('Feishu API Response:', JSON.stringify(response, null, 2));
-    return NextResponse.json({ data: response });
+    console.log('Filtered future items:', futureItems.length);
+
+    // 返回处理后的数据
+    return NextResponse.json({ 
+      data: {
+        ...response,
+        data: {
+          ...response.data,
+          data: {
+            ...response.data.data,
+            items: futureItems
+          }
+        }
+      }
+    });
+
   } catch (error: any) {
-    console.error('Detailed Error:', {
+    console.error('Error details:', {
       message: error.message,
-      name: error.name,
-      stack: error.stack,
-      response: error.response?.data,
+      code: error.code,
+      response: error.response?.data
     });
 
     return NextResponse.json(
       { 
         error: '获取数据失败', 
-        details: error instanceof Error ? error.message : String(error),
-        errorData: error.response?.data
+        details: error instanceof Error ? error.message : String(error)
       }, 
       { status: 500 }
     );
