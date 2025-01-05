@@ -52,12 +52,12 @@ export const metadata: Metadata = {
     follow: true,
   },
   alternates: {
-    canonical: 'http://njsky.cc',
+    canonical: new URL('http://njsky.cc'),
     languages: {
       'zh-CN': [
-        { url: 'http://njsky.cc', hreflang: 'zh-CN' },
-        { url: 'http://www.njsky.cc', hreflang: 'zh-CN' },
-        { url: 'http://njsky.liuliang.world', hreflang: 'zh-CN' }
+        { url: new URL('http://njsky.cc'), hreflang: 'zh-CN' },
+        { url: new URL('http://www.njsky.cc'), hreflang: 'zh-CN' },
+        { url: new URL('http://njsky.liuliang.world'), hreflang: 'zh-CN' }
       ],
     },
   },
