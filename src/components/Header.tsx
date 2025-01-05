@@ -9,9 +9,10 @@ export default function Header() {
           src="/images/cover/sunset.jpg"
           alt="南京火烧云"
           fill
-          priority={false}
+          priority
+          quality={75}
           className="object-cover"
-          sizes="100vw"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 100vw"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-transparent" />
       </div>

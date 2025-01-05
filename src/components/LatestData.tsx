@@ -67,12 +67,12 @@ const DataCard = ({ data }: { data: any }) => (
       <div className="text-lg font-medium text-gray-800 flex items-center">
         {data.humanReadable}
         <span className="ml-2 inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-sm">
-          {data.type === '日出' ? (
+          {data.fields.type === '日出' ? (
             <Sunrise className="w-4 h-4 mr-1" />
           ) : (
             <Sunset className="w-4 h-4 mr-1" />
           )}
-          {data.type}
+          {data.fields.type}
         </span>
       </div>
     </div>
@@ -84,11 +84,11 @@ const DataCard = ({ data }: { data: any }) => (
           <SunMedium className="w-5 h-5 mr-1 text-orange-400" />
           火烧云指数
         </div>
-        <div className={`text-4xl font-bold tracking-tight ${getHsyszColor(data.hsysz)}`}>
-          {data.hsysz}
+        <div className={`text-4xl font-bold tracking-tight ${getHsyszColor(data.fields.hsysz)}`}>
+          {data.fields.hsysz}
         </div>
-        <div className={`text-sm mt-1 ${getHsyszColor(data.hsysz)}`}>
-          {data.hsypj}
+        <div className={`text-sm mt-1 ${getHsyszColor(data.fields.hsysz)}`}>
+          {Array.isArray(data.fields.hsypj) ? data.fields.hsypj[0]?.text : data.fields.hsypj}
         </div>
       </div>
 
@@ -97,11 +97,11 @@ const DataCard = ({ data }: { data: any }) => (
           <Wind className="w-5 h-5 mr-1 text-blue-400" />
           气溶胶指数
         </div>
-        <div className={`text-4xl font-bold tracking-tight ${getQrjszColor(data.qrjsz)}`}>
-          {data.qrjsz}
+        <div className={`text-4xl font-bold tracking-tight ${getQrjszColor(data.fields.qrjsz)}`}>
+          {data.fields.qrjsz}
         </div>
-        <div className={`text-sm mt-1 ${getQrjszColor(data.qrjsz)}`}>
-          {data.kqzl}
+        <div className={`text-sm mt-1 ${getQrjszColor(data.fields.qrjsz)}`}>
+          {Array.isArray(data.fields.kqzl) ? data.fields.kqzl[0]?.text : data.fields.kqzl}
         </div>
       </div>
     </div>
@@ -173,93 +173,90 @@ const getLatestUpdateTime = (items: any[]): string => {
 };
 
 // 修改组件中的 any 类型
-const LatestData: React.FC<Props> = ({ data = [] }) => {
-  // 改用 history 接口
-  const { data: response, error, isLoading } = useSWR<FeishuResponse>('/api/feishu/history', fetcher);
-  
-  console.log('Raw API Response:', JSON.stringify(response, null, 2));
+const LatestData: React.FC = () => {
+  const { data: response, error } = useSWR<any>('/api/feishu/data', fetcher);
 
-  const processAndDeduplicateData = (items: any[]) => {
-    if (!items?.length) {
-      console.log('No items to process');
-      return [];
-    }
-    
-    const now = new Date();
-    console.log('Processing data at:', now.toISOString());
-    
-    // 使用Map按datetime和type去重，保留最新的updatetime
-    const uniqueMap = new Map();
-    
-    items.forEach(item => {
-      try {
-        if (!item.fields) {
-          console.log('Invalid item structure:', item);
-          return;
-        }
+  // 添加错误处理
+  if (error) {
+    console.error('Data fetching error:', error);
+    return (
+      <div className="p-4 text-red-500">
+        加载失败: {error.message}
+      </div>
+    );
+  }
 
-        const key = `${item.fields.datetime}-${item.fields.type}`;
-        const existingItem = uniqueMap.get(key);
-        const itemDate = new Date(item.fields.datetime);
-        
-        // 只处理未来的数据
-        if (itemDate <= now) {
-          return;
-        }
-        
-        console.log('Processing future item:', {
-          key,
-          datetime: item.fields.datetime,
-          parsedDate: itemDate.toISOString(),
-          type: item.fields.type,
-          updatetime: item.fields.updatetime,
-          hsysz: item.fields.hsysz,
-          qrjsz: item.fields.qrjsz
-        });
-        
-        if (!existingItem || existingItem.fields.updatetime < item.fields.updatetime) {
-          uniqueMap.set(key, item);
-        }
-      } catch (error) {
-        console.error('Error processing item:', error, item);
-      }
-    });
-
-    // 转换为数组
-    const processedItems = Array.from(uniqueMap.values())
-      .map(item => {
-        const itemDate = new Date(item.fields.datetime);
-        
-        return {
-          datetime: item.fields.datetime,
-          type: item.fields.type,
-          hsysz: parseFloat(item.fields.hsysz) || 0,
-          hsypj: item.fields.hsypj?.[0]?.text || '',
-          qrjsz: parseFloat(item.fields.qrjsz) || 0,
-          kqzl: item.fields.kqzl?.[0]?.text || '',
-          humanReadable: formatDate(itemDate.toString()),
-          now: formatDate(now.toString())
-        };
-      })
-      .sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime());
-
-    console.log('Final processed items:', processedItems);
-    return processedItems;
-  };
-
-  if (isLoading) {
+  // 添加加载状态
+  if (!response) {
     return <LoadingState />;
   }
 
-  if (error) {
-    console.error('Error details:', error);
-    return <ErrorState />;
-  }
-
-  const items = processAndDeduplicateData(response?.data?.data?.items || []);
+  const items = response?.data?.data?.items || [];
   
-  // 限制只显示最多4条未来的数据
-  const futureItems = items.slice(0, 4);
+  // 获取当前时间
+  const now = new Date();
+  
+  // 使用 Map 按日期和类型去重，保留最新更新的数据
+  const uniqueEventsMap = new Map();
+  
+  items.forEach(item => {
+    const itemDate = new Date(Number(item.fields.datetime));
+    // 只处理未来的数据
+    if (itemDate > now) {
+      const key = `${itemDate.toDateString()}-${item.fields.type}`;
+      const existingItem = uniqueEventsMap.get(key);
+      
+      // 如果不存在该事件，或者当前项的更新时间更新，则更新 Map
+      if (!existingItem || Number(item.fields.updatetime) > Number(existingItem.fields.updatetime)) {
+        uniqueEventsMap.set(key, item);
+      }
+    }
+  });
+
+  // 将 Map 转换为数组并按时间排序
+  const futureItems = Array.from(uniqueEventsMap.values())
+    .sort((a, b) => {
+      const dateA = new Date(Number(a.fields.datetime));
+      const dateB = new Date(Number(b.fields.datetime));
+      // 如果是同一天，日出排在日落前面
+      if (dateA.toDateString() === dateB.toDateString()) {
+        return a.fields.type === '日出' ? -1 : 1;
+      }
+      return dateA.getTime() - dateB.getTime();
+    })
+    .slice(0, 4);  // 限制显示4条
+
+  // 如果是周日，确保显示周一的数据
+  if (now.getDay() === 0) {
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    // 检查是否已经包含了明天的数据
+    const hasTomorrowSunrise = futureItems.some(item => {
+      const itemDate = new Date(Number(item.fields.datetime));
+      return itemDate.toDateString() === tomorrow.toDateString() && item.fields.type === '日出';
+    });
+    
+    const hasTomorrowSunset = futureItems.some(item => {
+      const itemDate = new Date(Number(item.fields.datetime));
+      return itemDate.toDateString() === tomorrow.toDateString() && item.fields.type === '日落';
+    });
+
+    // 如果缺少任何一个，从原始数据中查找并添加
+    if (!hasTomorrowSunrise || !hasTomorrowSunset) {
+      items.forEach(item => {
+        const itemDate = new Date(Number(item.fields.datetime));
+        if (itemDate.toDateString() === tomorrow.toDateString()) {
+          if (!hasTomorrowSunrise && item.fields.type === '日出') {
+            futureItems.push(item);
+          }
+          if (!hasTomorrowSunset && item.fields.type === '日落') {
+            futureItems.push(item);
+          }
+        }
+      });
+    }
+  }
 
   return (
     <div className="bg-white shadow-lg rounded-lg p-6">
@@ -271,7 +268,7 @@ const LatestData: React.FC<Props> = ({ data = [] }) => {
         </div>
         {futureItems.length > 0 && (
           <span className="text-sm text-gray-500 ml-2">
-            最后更新: {getLatestUpdateTime(response?.data?.data?.items || [])}
+            最后更新: {getLatestUpdateTime(items)}
           </span>
         )}
       </div>
@@ -290,10 +287,13 @@ const LatestData: React.FC<Props> = ({ data = [] }) => {
         ) : (
           futureItems.map((item, index) => (
             <div 
-              key={`${item.datetime}-${item.type}-${index}`} 
+              key={`${item.fields.datetime}-${item.fields.type}-${index}`} 
               className="w-full"
             >
-              <DataCard data={item} />
+              <DataCard data={{
+                ...item,
+                humanReadable: formatDate(new Date(Number(item.fields.datetime)).toString())
+              }} />
             </div>
           ))
         )}

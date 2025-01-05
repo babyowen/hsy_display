@@ -13,36 +13,41 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "南京火烧云观测",
-  description: "南京火烧云和空气质量观测数据",
+  title: "南京火烧云",
+  description: "南京火烧云预报 - 实时监测火烧云和空气质量数据",
   icons: {
     icon: [
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
-      {
-        url: "/favicon.ico",
-        sizes: "16x16",
-      },
-      {
-        url: "/icon-192.png",
-        sizes: "192x192",
-        type: "image/png",
-      },
-      {
-        url: "/icon-512.png",
-        sizes: "512x512",
-        type: "image/png",
-      },
+      { rel: 'icon', url: '/favicon.ico' },
+      { rel: 'icon', url: '/icon.svg', type: 'image/svg+xml' },
+      { rel: 'apple-touch-icon', url: '/apple-icon.png' }
     ],
-    apple: [
+  },
+  openGraph: {
+    title: '南京火烧云',
+    description: '南京火烧云预报 - 实时监测火烧云和空气质量数据',
+    images: [
       {
-        url: "/apple-icon.png",
-        sizes: "180x180",
-        type: "image/png",
-      },
+        url: '/images/cover/sunset.jpg',
+        width: 1200,
+        height: 630,
+        alt: '南京火烧云',
+      }
     ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: '南京火烧云',
+    description: '南京火烧云预报 - 实时监测火烧云和空气质量数据',
+    images: ['/images/cover/sunset.jpg'],
+  },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 

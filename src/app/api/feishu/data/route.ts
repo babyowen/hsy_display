@@ -1,14 +1,27 @@
 import { NextResponse } from 'next/server'
 import { Client } from '@larksuiteoapi/node-sdk'
 
+// 添加环境变量类型声明
+declare global {
+  namespace NodeJS {
+    interface ProcessEnv {
+      FEISHU_APP_ID: string
+      FEISHU_APP_SECRET: string
+      FEISHU_APP_TOKEN: string
+      TABLE_ID: string
+      VIEW_ID: string
+    }
+  }
+}
+
 interface FeishuField {
-  datetime: number;  // 确保这是数字类型
+  datetime: string | number;  // 可以是字符串或数字
   type: string;
-  hsysz: number;
-  hsypj: Array<{ text: string }>;
-  qrjsz: number;
-  kqzl: Array<{ text: string }>;
-  updatetime: number;
+  hsysz: string | number;
+  hsypj: Array<{ text: string }> | string | number;
+  qrjsz: string | number;
+  kqzl: Array<{ text: string }> | string | number;
+  updatetime: string | number;
 }
 
 interface FeishuRecord {
@@ -19,10 +32,8 @@ interface FeishuRecord {
 interface FeishuResponse {
   code: number;
   data: {
-    data: {
-      items: FeishuRecord[];
-      has_more: boolean;
-    };
+    items: FeishuRecord[];
+    has_more: boolean;
   };
 }
 
@@ -43,7 +54,7 @@ interface RequestParams {
       conjunction?: "or" | "and";
       conditions?: Array<{
         field_name: string;
-        operator: "is" | "isNot" | "contains" | "doesNotContain" | "isEmpty" | "isNotEmpty";
+        operator: "is" | "isNot" | "contains" | "doesNotContain" | "isEmpty" | "isNotEmpty" | "isGreater" | "isGreaterEqual" | "isLess" | "isLessEqual" | "like" | "in";
         value?: string[];
       }>;
     };
@@ -54,6 +65,18 @@ interface RequestParams {
 
 async function getTenantToken() {
   try {
+    console.log('Starting token request...');
+    
+    // 测试网络连接
+    try {
+      const testResponse = await fetch('https://open.feishu.cn/open-apis/ping', {
+        method: 'GET'
+      });
+      console.log('Feishu API connectivity test:', testResponse.status);
+    } catch (error) {
+      console.error('Feishu API connectivity test failed:', error);
+    }
+
     console.log('Requesting tenant token with:', {
       app_id: process.env.FEISHU_APP_ID,
       app_secret: process.env.FEISHU_APP_SECRET?.slice(0, 4) + '****'
@@ -79,34 +102,37 @@ async function getTenantToken() {
       throw new Error(`Failed to get tenant token: ${data.msg}`);
     }
   } catch (error) {
-    console.error('Error getting tenant token:', error);
+    console.error('Full token error:', error);
     throw error;
   }
 }
 
 export async function GET() {
   try {
+    // 验证环境变量
+    const envCheck = {
+      hasAppId: !!process.env.FEISHU_APP_ID,
+      hasAppSecret: !!process.env.FEISHU_APP_SECRET,
+      hasAppToken: !!process.env.FEISHU_APP_TOKEN,
+      hasTableId: !!process.env.TABLE_ID,
+      hasViewId: !!process.env.VIEW_ID
+    };
+    
+    console.log('Environment check:', envCheck);
+
+    if (!process.env.FEISHU_APP_ID || !process.env.FEISHU_APP_SECRET) {
+      throw new Error('Missing required environment variables');
+    }
+
     const tenantToken = await getTenantToken();
-    console.log('Got tenant token:', tenantToken ? '成功获取' : '获取失败');
+    if (!tenantToken) {
+      throw new Error('Failed to get tenant token');
+    }
 
     const client = new Client({
       appId: process.env.FEISHU_APP_ID,
       appSecret: process.env.FEISHU_APP_SECRET,
       disableTokenCache: true
-    });
-
-    // 获取当前时间和未来7天的时间范围
-    const now = new Date();
-    const future = new Date(now);
-    future.setDate(now.getDate() + 7);
-
-    // 格式化时间为 ISO 字符串
-    const nowStr = now.toISOString();
-    const futureStr = future.toISOString();
-
-    console.log('Time range:', {
-      now: nowStr,
-      future: futureStr
     });
 
     const requestParams: RequestParams = {
@@ -118,16 +144,6 @@ export async function GET() {
         view_id: process.env.VIEW_ID,
         page_size: 100,
         field_names: ['datetime', 'type', 'hsysz', 'hsypj', 'qrjsz', 'kqzl', 'updatetime'],
-        filter: {
-          conjunction: 'and' as const,
-          conditions: [
-            {
-              field_name: 'datetime',
-              operator: 'contains',
-              value: [nowStr.split('T')[0]]  // 使用当前日期作为起始点
-            }
-          ]
-        },
         sort: [
           {
             field_name: 'datetime',
@@ -137,57 +153,80 @@ export async function GET() {
       }
     };
 
-    console.log('Request params:', JSON.stringify(requestParams, null, 2));
+    // 添加调试日志
+    console.log('Request parameters:', {
+      appToken: process.env.FEISHU_APP_TOKEN,
+      tableId: process.env.TABLE_ID,
+      viewId: process.env.VIEW_ID,
+      requestParams
+    });
 
     const response = await client.bitable.appTableRecord.search(requestParams, {
       headers: {
         'Authorization': `Bearer ${tenantToken}`
       }
-    }) as FeishuResponse;
-
-    // 打印完整的响应数据
-    console.log('Full API response:', JSON.stringify(response, null, 2));
-
-    if (!response.data.data?.items?.length) {
-      console.log('No items found in response');
-      return NextResponse.json({ data: { items: [] } });
-    }
-
-    // 过滤出未来的数据
-    const futureItems = response.data.data.items.filter(item => {
-      const itemDate = new Date(item.fields.datetime);
-      return itemDate > now && itemDate <= future;
     });
 
-    console.log('Filtered future items:', futureItems.length);
+    // 添加响应调试日志
+    console.log('API Response:', {
+      status: response?.code,
+      hasData: !!response?.data?.items,
+      itemCount: response?.data?.items?.length
+    });
 
-    // 返回处理后的数据
+    // 确保响应格式正确
+    if (!response?.data?.items) {
+      throw new Error('Invalid response format from Feishu API');
+    }
+
+    // 处理数据格式
+    const processedItems = response.data.items.map(item => ({
+      fields: {
+        datetime: String(item.fields.datetime || ''),
+        type: String(item.fields.type || ''),
+        hsysz: parseFloat(String(item.fields.hsysz)) || 0,
+        hsypj: Array.isArray(item.fields.hsypj) ? item.fields.hsypj : [{ text: String(item.fields.hsypj || '') }],
+        qrjsz: parseFloat(String(item.fields.qrjsz)) || 0,
+        kqzl: Array.isArray(item.fields.kqzl) ? item.fields.kqzl : [{ text: String(item.fields.kqzl || '') }],
+        updatetime: String(item.fields.updatetime || '')
+      }
+    }));
+
     return NextResponse.json({ 
       data: {
-        ...response,
+        code: 0,
         data: {
-          ...response.data,
-          data: {
-            ...response.data.data,
-            items: futureItems
-          }
+          items: processedItems,
+          has_more: false
         }
       }
     });
 
   } catch (error: any) {
-    console.error('Error details:', {
+    console.error('API Error:', {
       message: error.message,
+      stack: error.stack,
       code: error.code,
-      response: error.response?.data
+      response: error.response?.data || error.response
     });
 
     return NextResponse.json(
       { 
-        error: '获取数据失败', 
-        details: error instanceof Error ? error.message : String(error)
+        error: error.message || '获取数据失败',
+        details: error.stack,
+        code: error.code,
+        response: error.response?.data || error.response
       }, 
       { status: 500 }
     );
   }
 } 
+
+// 在路由处理开始时打印环境变量
+console.log('API Route Environment:', {
+  hasAppId: !!process.env.FEISHU_APP_ID,
+  hasAppSecret: !!process.env.FEISHU_APP_SECRET,
+  hasAppToken: !!process.env.FEISHU_APP_TOKEN,
+  hasTableId: !!process.env.TABLE_ID,
+  hasViewId: !!process.env.VIEW_ID
+}); 
