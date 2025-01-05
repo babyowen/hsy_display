@@ -21,7 +21,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "南京火烧云",
   description: "南京火烧云预报 - 实时监测火烧云和空气质量数据",
-  metadataBase: new URL('https://hsy.liuliang.co'),
+  metadataBase: new URL('http://njsky.cc'),
   icons: {
     icon: [
       { rel: 'icon', url: '/favicon.ico' },
@@ -50,6 +50,16 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+  },
+  alternates: {
+    canonical: 'http://njsky.cc',
+    languages: {
+      'zh-CN': [
+        'http://njsky.cc',
+        'http://www.njsky.cc',
+        'http://njsky.liuliang.world'
+      ],
+    },
   },
 };
 

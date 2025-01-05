@@ -7,28 +7,33 @@
     "build": "next build",
     "start": "next start -p 3002",
     "lint": "next lint",
-    "generate-icons": "node scripts/generate-icons.js"
+    "generate-icons": "node scripts/generate-icons.js",
+    "clean": "rm -rf node_modules package-lock.json",
+    "fresh-install": "npm run clean && npm install"
   },
   "dependencies": {
-    "@larksuiteoapi/node-sdk": "^1.40.1",
-    "lucide-react": "^0.321.0",
+    "@larksuiteoapi/node-sdk": "1.40.1",
+    "lucide-react": "0.321.0",
     "next": "15.1.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "swr": "^2.3.0"
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "swr": "2.3.0"
   },
   "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0",
-    "autoprefixer": "^10.4.20",
-    "eslint": "^8.57.0",
+    "@types/node": "20.11.24",
+    "@types/react": "18.2.61",
+    "@types/react-dom": "18.2.19",
+    "@typescript-eslint/eslint-plugin": "7.0.0",
+    "@typescript-eslint/parser": "7.0.0",
+    "autoprefixer": "10.4.20",
+    "eslint": "8.57.0",
     "eslint-config-next": "15.1.0",
-    "postcss": "^8.4.49",
-    "sharp": "^0.33.5",
-    "tailwindcss": "^3.4.17",
-    "typescript": "^5"
+    "postcss": "8.4.49",
+    "sharp": "0.33.5",
+    "tailwindcss": "3.4.17",
+    "typescript": "5.3.3"
+  },
+  "engines": {
+    "node": ">=18.17.0"
   }
 }

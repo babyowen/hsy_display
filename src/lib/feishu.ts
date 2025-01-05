@@ -1,19 +1,37 @@
 import { Client } from '@larksuiteoapi/node-sdk'
 
-export interface SunsetData {
-  datetime: string;
-  type: string;
-  hsysz: number;  // 火烧云数值
-  hsypj: string;  // 火烧云评价
-  qrjsz: number;  // 气溶胶数值
-  kqzl: string;   // 空气质量评价
-  updatetime: string;
+export async function getFeishuClient() {
+  try {
+    const client = new Client({
+      appId: process.env.FEISHU_APP_ID,
+      appSecret: process.env.FEISHU_APP_SECRET,
+      disableTokenCache: true
+    });
+
+    return client;
+  } catch (error) {
+    console.error('Failed to initialize Feishu client:', error);
+    return null;
+  }
 }
 
-export function getFeishuClient() {
-  return new Client({
-    appId: process.env.FEISHU_APP_ID,
-    appSecret: process.env.FEISHU_APP_SECRET,
-    disableTokenCache: false
-  })
+export async function getTenantToken() {
+  try {
+    const response = await fetch('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        app_id: process.env.FEISHU_APP_ID,
+        app_secret: process.env.FEISHU_APP_SECRET
+      })
+    });
+
+    const data = await response.json();
+    return data.tenant_access_token;
+  } catch (error) {
+    console.error('Failed to get tenant token:', error);
+    return null;
+  }
 } 
