@@ -55,9 +55,9 @@ export const metadata: Metadata = {
     canonical: 'http://njsky.cc',
     languages: {
       'zh-CN': [
-        'http://njsky.cc',
-        'http://www.njsky.cc',
-        'http://njsky.liuliang.world'
+        { url: 'http://njsky.cc', hreflang: 'zh-CN' },
+        { url: 'http://www.njsky.cc', hreflang: 'zh-CN' },
+        { url: 'http://njsky.liuliang.world', hreflang: 'zh-CN' }
       ],
     },
   },
