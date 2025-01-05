@@ -54,13 +54,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: new URL('http://njsky.cc'),
     languages: {
-      'zh-CN': [
-        { url: new URL('http://njsky.cc'), hreflang: 'zh-CN' },
-        { url: new URL('http://www.njsky.cc'), hreflang: 'zh-CN' },
-        { url: new URL('http://njsky.liuliang.world'), hreflang: 'zh-CN' }
-      ],
-    },
-  },
+      'zh-CN': new URL('http://njsky.cc')
+    }
+  }
 };
 
 export default function RootLayout({
