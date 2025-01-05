@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -12,9 +12,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 export const metadata: Metadata = {
   title: "南京火烧云",
   description: "南京火烧云预报 - 实时监测火烧云和空气质量数据",
+  metadataBase: new URL('https://hsy.liuliang.co'),
   icons: {
     icon: [
       { rel: 'icon', url: '/favicon.ico' },
@@ -39,11 +46,6 @@ export const metadata: Metadata = {
     title: '南京火烧云',
     description: '南京火烧云预报 - 实时监测火烧云和空气质量数据',
     images: ['/images/cover/sunset.jpg'],
-  },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
   },
   robots: {
     index: true,
