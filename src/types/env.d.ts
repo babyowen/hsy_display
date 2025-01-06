@@ -5,5 +5,6 @@ declare namespace NodeJS {
     FEISHU_APP_TOKEN: string
     TABLE_ID: string
     VIEW_ID: string
+    NODE_ENV: 'development' | 'production' | 'test'
   }
 } 

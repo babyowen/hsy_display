@@ -1,39 +1,54 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { formatDate, fetcher } from '@/lib/utils'
-import useSWR from 'swr'
+import { format } from 'date-fns'
+import { zhCN } from 'date-fns/locale'
+import { History } from 'lucide-react'
+import type { FeishuResponse } from '@/lib/types'
 
-interface HistoryData {
-  datetime: number
-  type: string
-  hsysz: number
-  hsypj: string
-  qrjsz: number
-  kqzl: string
-  updatetime: number
+// 复用颜色判断函数
+function getHsyszColor(value: string): string {
+  const numValue = parseFloat(value)
+  if (numValue > 0.8) return 'text-red-500'
+  if (numValue > 0.2) return 'text-green-500'
+  return 'text-gray-400'
 }
 
-export default function DataTable() {
-  const { data: response, error } = useSWR<any>('/api/feishu/history', fetcher)
-  
-  if (error) return <div className="text-red-500">加载失败</div>
-  if (!response) return (
-    <div className="bg-white shadow-lg rounded-lg p-6 animate-pulse">
-      <div className="h-8 w-48 bg-gray-200 rounded mb-6" />
-      <div className="space-y-4">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-12 bg-gray-200 rounded w-full" />
-        ))}
-      </div>
-    </div>
-  )
-  
-  // 处理数据：按时间和类型分组，只保留每组最新的数据
-  const processedData = response.data.data.items.reduce((acc: { [key: string]: HistoryData }, item: any) => {
-    const key = `${item.fields.datetime}_${item.fields.type}`
-    if (!acc[key] || acc[key].updatetime < item.fields.updatetime) {
+function getQrjszColor(value: string): string {
+  const numValue = parseFloat(value)
+  if (numValue > 0.8) return 'text-black'
+  if (numValue > 0.4) return 'text-purple-500'
+  if (numValue > 0.2) return 'text-green-500'
+  return 'text-green-400'
+}
+
+// 定义数据类型
+interface ProcessedDataItem {
+  datetime: number
+  type: string
+  hsysz: string
+  hsypj: string
+  qrjsz: string
+  kqzl: string
+  updatetime: string
+}
+
+interface DataTableProps {
+  data: {
+    data: {
+      items: FeishuResponse['data']['items']
+    }
+  }
+  title: string
+}
+
+export default function DataTable({ data, title }: DataTableProps) {
+  // 数据去重
+  const processedData = data.data.items.reduce<{ [key: string]: ProcessedDataItem }>((acc, item) => {
+    const datetime = new Date(item.fields.datetime).getTime()
+    const key = `${datetime}_${item.fields.type}`
+    
+    if (!acc[key] || new Date(acc[key].updatetime).getTime() < new Date(item.fields.updatetime).getTime()) {
       acc[key] = {
-        datetime: item.fields.datetime,
+        datetime,
         type: item.fields.type,
         hsysz: item.fields.hsysz,
         hsypj: item.fields.hsypj[0]?.text || '无评价',
@@ -46,100 +61,48 @@ export default function DataTable() {
   }, {})
 
   // 转换为数组并按时间倒序排列，只显示过去的数据
-  const sortedData = Object.values(processedData)
-    .filter(item => item.datetime <= Date.now())
-    .sort((a, b) => b.datetime - a.datetime)
-
-  // 如果没有历史数据，显示提示信息
-  if (sortedData.length === 0) {
-    return (
-      <div className="bg-white shadow-lg rounded-lg p-6">
-        <h2 className="text-2xl font-semibold mb-6 text-gray-800">本周数据</h2>
-        <div className="p-4 bg-yellow-50 text-yellow-600 rounded-lg">
-          暂无历史数据
-        </div>
-      </div>
-    )
-  }
+  const tableData = Object.values(processedData)
+    .filter((item: ProcessedDataItem) => item.datetime < Date.now())
+    .sort((a: ProcessedDataItem, b: ProcessedDataItem) => b.datetime - a.datetime)
 
   return (
-    <div className="bg-white shadow-lg rounded-lg p-6">
-      <h2 className="text-2xl font-semibold mb-6 text-gray-800">本周数据</h2>
+    <div>
+      <div className="flex items-center gap-2 mb-4">
+        <History className="w-7 h-7 text-blue-500" />
+        <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
+      </div>
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="min-w-full bg-white">
           <thead className="bg-gray-50">
             <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                时间
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                类型
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                火烧云指数
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                火烧云评价
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                气溶胶指数
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                空气质量
-              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">时间</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">类型</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">火烧云指数</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">火烧云评价</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">气溶胶指数</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">空气质量</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {sortedData.map((item) => (
-              <tr key={`${item.datetime}_${item.type}`} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {new Date(item.datetime).toLocaleString('zh-CN', {
-                    month: 'numeric',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: 'numeric'
-                  })}
+          <tbody className="divide-y divide-gray-200">
+            {tableData.map((item: ProcessedDataItem, index: number) => (
+              <tr key={index} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {format(item.datetime, 'MM-dd HH:mm', { locale: zhCN })}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {item.type}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <span className={`${
-                    item.hsysz > 0.8 ? 'text-red-500' : 
-                    item.hsysz > 0.2 ? 'text-green-500' : 
-                    'text-gray-400'
-                  }`}>
-                    {item.hsysz}
-                  </span>
+                <td className={`px-6 py-4 whitespace-nowrap text-sm ${getHsyszColor(item.hsysz)}`}>
+                  {item.hsysz}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <span className={`${
-                    item.hsysz > 0.8 ? 'text-red-500' : 
-                    item.hsysz > 0.2 ? 'text-green-500' : 
-                    'text-gray-400'
-                  }`}>
-                    {item.hsypj}
-                  </span>
+                <td className={`px-6 py-4 whitespace-nowrap text-sm ${getHsyszColor(item.hsysz)}`}>
+                  {item.hsypj}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <span className={`${
-                    item.qrjsz > 0.8 ? 'text-black' :
-                    item.qrjsz > 0.4 ? 'text-purple-500' :
-                    item.qrjsz > 0.2 ? 'text-green-500' :
-                    'text-green-400'
-                  }`}>
-                    {item.qrjsz}
-                  </span>
+                <td className={`px-6 py-4 whitespace-nowrap text-sm ${getQrjszColor(item.qrjsz)}`}>
+                  {item.qrjsz}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <span className={`${
-                    item.qrjsz > 0.8 ? 'text-black' :
-                    item.qrjsz > 0.4 ? 'text-purple-500' :
-                    item.qrjsz > 0.2 ? 'text-green-500' :
-                    'text-green-400'
-                  }`}>
-                    {item.kqzl}
-                  </span>
+                <td className={`px-6 py-4 whitespace-nowrap text-sm ${getQrjszColor(item.qrjsz)}`}>
+                  {item.kqzl}
                 </td>
               </tr>
             ))}
