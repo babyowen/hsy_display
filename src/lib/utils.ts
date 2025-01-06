@@ -14,19 +14,22 @@ export function cn(...classes: string[]) {
 }
 
 export const fetcher = async (url: string) => {
-  const response = await fetch(url);
-  
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    console.error('API Error:', {
-      status: response.status,
-      statusText: response.statusText,
-      errorData
-    });
-    throw new Error(
-      `API error: ${response.status} - ${errorData?.error || response.statusText}`
-    );
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      console.error('Fetch Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorData
+      });
+      throw new Error(
+        `API error: ${response.status} - ${errorData?.error || response.statusText}`
+      );
+    }
+    return response.json();
+  } catch (error) {
+    console.error('Fetch caught error:', error);
+    throw error;
   }
-  
-  return response.json();
 }; 

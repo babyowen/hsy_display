@@ -2,97 +2,124 @@
 import React from 'react'
 import { fetcher } from '@/lib/utils'
 import useSWR from 'swr'
+import { FeishuResponse, ProcessedData } from '@/types/feishu'
 
-interface HistoryData {
-  record_id: string;
-  datetime: number;
-  type: string;
-  hsysz: number;
-  hsypj: string;
-  qrjsz: number;
-  kqzl: string;
-  updatetime: number;
-}
+const DataTable: React.FC = () => {
+  console.log('1. 组件初始化');
+  const { data: response, error } = useSWR<FeishuResponse>('/api/feishu/data', fetcher)
+  
+  console.log('2. API响应状态:', {
+    hasData: !!response,
+    hasError: !!error,
+    errorMessage: error?.message
+  });
 
-interface DataItem {
-  id: string;
-}
-
-interface Props {
-  data?: DataItem[];
-}
-
-interface FeishuResponse {
-  data: {
-    data: {
-      items: any[]
-    }
+  if (error) {
+    console.error('3. 数据加载失败:', error);
+    return <div className="text-red-500">加载失败</div>
   }
-}
 
-const DataTable: React.FC<Props> = ({ data = [] }) => {
-  const { data: response, error } = useSWR<FeishuResponse>('/api/feishu/history', fetcher)
-  
-  if (error) return <div className="text-red-500">加载失败</div>
-  if (!response) return (
-    <div className="bg-white shadow-lg rounded-lg p-6 animate-pulse">
-      <div className="h-8 w-48 bg-gray-200 rounded mb-6" />
-      <div className="space-y-4">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-12 bg-gray-200 rounded w-full" />
-        ))}
+  if (!response) {
+    console.log('3. 数据加载中...');
+    return (
+      <div className="bg-white shadow-lg rounded-lg p-6 animate-pulse">
+        <div className="h-8 w-48 bg-gray-200 rounded mb-6" />
+        <div className="space-y-4">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-12 bg-gray-200 rounded w-full" />
+          ))}
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
   
+  console.log('3. 数据加载成功，开始处理数据');
+  
+  // 筛选本周数据
+  const items = response?.data?.data?.items || [];
+  console.log('4. 原始数据条数:', items.length);
+
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay());
+  startOfWeek.setHours(0, 0, 0, 0);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(endOfWeek.getDate() + 7);
+
+  console.log('5. 设置时间范围:', {
+    当前时间: now.toLocaleString(),
+    本周开始: startOfWeek.toLocaleString(),
+    本周结束: endOfWeek.toLocaleString()
+  });
+
+  // 筛选本周数据
+  const thisWeekItems = items.filter(item => {
+    const itemDate = new Date(Number(item.fields.datetime));
+    const isThisWeek = itemDate >= startOfWeek && itemDate < endOfWeek;
+    console.log('6. 处理数据项:', {
+      日期: itemDate.toLocaleString(),
+      是否本周: isThisWeek,
+      类型: item.fields.type
+    });
+    return isThisWeek;
+  });
+
+  console.log('7. 本周数据条数:', thisWeekItems.length);
+
   // 处理数据：按时间和类型分组，只保留每组最新的数据
-  const processData = (items: any[]) => {
+  const processData = (items: typeof thisWeekItems): ProcessedData[] => {
     if (!items?.length) return [];
     
-    const now = new Date();
-    
-    // 使用 Map 按时间和类型去重，保留最新的记录
-    const uniqueMap = new Map();
+    console.log('8. 开始数据去重处理');
+    const uniqueMap = new Map<string, ProcessedData>();
     
     items.forEach(item => {
-      const key = `${item.fields.datetime}-${item.fields.type}`;
-      const itemDate = new Date(item.fields.datetime);
+      const itemDate = new Date(Number(item.fields.datetime));
+      const key = `${itemDate.toDateString()}-${item.fields.type}`;
       
-      // 只处理历史数据
-      if (itemDate > now) {
-        return;
-      }
+      const processedItem: ProcessedData = {
+        record_id: item.record_id,
+        datetime: Number(item.fields.datetime),
+        type: item.fields.type,
+        hsysz: Number(item.fields.hsysz) || 0,
+        hsypj: Array.isArray(item.fields.hsypj) ? item.fields.hsypj[0]?.text || '无评价' : String(item.fields.hsypj),
+        qrjsz: Number(item.fields.qrjsz) || 0,
+        kqzl: Array.isArray(item.fields.kqzl) ? item.fields.kqzl[0]?.text || '无评价' : String(item.fields.kqzl),
+        updatetime: Number(item.fields.updatetime)
+      };
       
       const existingItem = uniqueMap.get(key);
-      if (!existingItem || existingItem.fields.updatetime < item.fields.updatetime) {
-        uniqueMap.set(key, item);
+      if (!existingItem || existingItem.updatetime < processedItem.updatetime) {
+        console.log('9. 更新数据:', {
+          key,
+          更新原因: existingItem ? '发现更新的数据' : '新数据',
+          更新时间: new Date(processedItem.updatetime).toLocaleString()
+        });
+        uniqueMap.set(key, processedItem);
       }
     });
 
-    // 转换为数组并排序
-    return Array.from(uniqueMap.values())
-      .map(item => ({
-        record_id: item.record_id, // 添加 record_id
-        datetime: item.fields.datetime,
-        type: item.fields.type,
-        hsysz: parseFloat(item.fields.hsysz) || 0,
-        hsypj: item.fields.hsypj[0]?.text || '无评价',
-        qrjsz: parseFloat(item.fields.qrjsz) || 0,
-        kqzl: item.fields.kqzl[0]?.text || '无评价',
-        updatetime: item.fields.updatetime
-      }))
-      .sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime());
+    // 转换为数组并按时间降序排序
+    const result = Array.from(uniqueMap.values())
+      .sort((a, b) => b.datetime - a.datetime);
+    
+    console.log('10. 数据处理完成:', {
+      去重后数据条数: result.length,
+      数据预览: result.slice(0, 2)  // 只显示前两条数据预览
+    });
+
+    return result;
   };
 
-  const sortedData = processData(response.data.data.items);
+  const sortedData = processData(thisWeekItems);
 
-  // 如果没有历史数据，显示提示信息
+  // 如果没有数据，显示提示信息
   if (sortedData.length === 0) {
     return (
       <div className="bg-white shadow-lg rounded-lg p-6">
         <h2 className="text-2xl font-semibold mb-6 text-gray-800">本周数据</h2>
         <div className="p-4 bg-yellow-50 text-yellow-600 rounded-lg">
-          暂无历史数据
+          暂无本周数据
         </div>
       </div>
     )

@@ -173,8 +173,21 @@ const getLatestUpdateTime = (items: any[]): string => {
 };
 
 // 修改组件中的 any 类型
-const LatestData: React.FC = () => {
-  const { data: response, error } = useSWR<any>('/api/feishu/data', fetcher);
+export default function LatestData() {
+  const { data: response, error } = useSWR<FeishuResponse>('/api/feishu/data', fetcher);
+
+  // 添加更详细的 API 响应调试
+  console.log('API Response 详细信息:', {
+    hasData: !!response,
+    error: error,
+    responseData: response,
+    dataStructure: {
+      hasDataProperty: !!response?.data,
+      hasNestedData: !!response?.data?.data,
+      hasItems: !!response?.data?.data?.items,
+      rawResponse: response
+    }
+  });
 
   // 添加错误处理
   if (error) {
@@ -192,29 +205,105 @@ const LatestData: React.FC = () => {
   }
 
   const items = response?.data?.data?.items || [];
+  console.log('数据解析:', {
+    responseData: response,
+    dataField: response?.data,
+    nestedData: response?.data?.data,
+    items: items,
+    itemsLength: items.length
+  });
   
-  // 获取当前时间
   const now = new Date();
-  
-  // 使用 Map 按日期和类型去重，保留最新更新的数据
-  const uniqueEventsMap = new Map();
-  
-  items.forEach(item => {
+  const today = now.getDay(); // 0是周日，1-6是周一到周六
+
+  // 如果是周日，向前推一周
+  const thisWeekStart = new Date(now);
+  if (today === 0) {
+    thisWeekStart.setDate(now.getDate() - 6); // 回到上周一
+  } else {
+    thisWeekStart.setDate(now.getDate() - today + 1); // 回到本周一
+  }
+  thisWeekStart.setHours(0, 0, 0, 0);
+
+  const thisWeekEnd = new Date(now);
+  if (today === 0) {
+    thisWeekEnd.setHours(23, 59, 59, 999); // 今天就是周日，设为今天结束
+  } else {
+    thisWeekEnd.setDate(thisWeekStart.getDate() + 6); // 设为本周日
+    thisWeekEnd.setHours(23, 59, 59, 999);
+  }
+
+  console.log('时间范围设置:', {
+    当前时间: now.toLocaleString(),
+    本周开始: thisWeekStart.toLocaleString(),
+    本周结束: thisWeekEnd.toLocaleString()
+  });
+
+  // 1. 分别处理本周和下周数据
+  const currentWeekData = items.filter(item => {
     const itemDate = new Date(Number(item.fields.datetime));
-    // 只处理未来的数据
-    if (itemDate > now) {
-      const key = `${itemDate.toDateString()}-${item.fields.type}`;
-      const existingItem = uniqueEventsMap.get(key);
-      
-      // 如果不存在该事件，或者当前项的更新时间更新，则更新 Map
-      if (!existingItem || Number(item.fields.updatetime) > Number(existingItem.fields.updatetime)) {
-        uniqueEventsMap.set(key, item);
-      }
+    return itemDate >= thisWeekStart && itemDate <= thisWeekEnd;
+  });
+
+  const nextWeekStart = new Date(thisWeekEnd);
+  nextWeekStart.setDate(nextWeekStart.getDate() + 1);
+  nextWeekStart.setHours(0, 0, 0, 0);
+  const nextWeekEnd = new Date(nextWeekStart);
+  nextWeekEnd.setDate(nextWeekStart.getDate() + 6);
+  nextWeekEnd.setHours(23, 59, 59, 999);
+
+  const nextWeekData = items.filter(item => {
+    const itemDate = new Date(Number(item.fields.datetime));
+    return itemDate > thisWeekEnd && itemDate <= nextWeekEnd;
+  });
+
+  console.log('数据分类:', {
+    本周数据: {
+      时间范围: `${thisWeekStart.toLocaleString()} - ${thisWeekEnd.toLocaleString()}`,
+      数据条数: currentWeekData.length,
+      示例: currentWeekData.slice(0, 2).map(item => ({
+        日期: new Date(Number(item.fields.datetime)).toLocaleString(),
+        类型: item.fields.type
+      }))
+    },
+    下周数据: {
+      时间范围: `${nextWeekStart.toLocaleString()} - ${nextWeekEnd.toLocaleString()}`,
+      数据条数: nextWeekData.length,
+      示例: nextWeekData.slice(0, 2).map(item => ({
+        日期: new Date(Number(item.fields.datetime)).toLocaleString(),
+        类型: item.fields.type
+      }))
     }
   });
 
-  // 将 Map 转换为数组并按时间排序
-  const futureItems = Array.from(uniqueEventsMap.values())
+  // 2. 合并数据
+  const combinedData = [...currentWeekData, ...nextWeekData];
+  console.log('合并数据:', {
+    总条数: combinedData.length,
+    示例: combinedData.slice(0, 2).map(item => ({
+      日期: new Date(Number(item.fields.datetime)).toLocaleString(),
+      类型: item.fields.type
+    }))
+  });
+
+  // 3. 数据去重（按日期和类型，保留最新更新时间的记录）
+  const uniqueEventsMap = new Map();
+  combinedData.forEach(item => {
+    const key = `${new Date(Number(item.fields.datetime)).toDateString()}-${item.fields.type}`;
+    const existingItem = uniqueEventsMap.get(key);
+    
+    if (!existingItem || Number(item.fields.updatetime) > Number(existingItem.fields.updatetime)) {
+      uniqueEventsMap.set(key, item);
+      console.log('更新数据:', {
+        key,
+        更新原因: existingItem ? '发现更新的数据' : '新数据',
+        更新时间: new Date(Number(item.fields.updatetime)).toLocaleString()
+      });
+    }
+  });
+
+  // 4. 转换为数组并排序
+  const sortedItems = Array.from(uniqueEventsMap.values())
     .sort((a, b) => {
       const dateA = new Date(Number(a.fields.datetime));
       const dateB = new Date(Number(b.fields.datetime));
@@ -223,40 +312,22 @@ const LatestData: React.FC = () => {
         return a.fields.type === '日出' ? -1 : 1;
       }
       return dateA.getTime() - dateB.getTime();
-    })
-    .slice(0, 4);  // 限制显示4条
-
-  // 如果是周日，确保显示周一的数据
-  if (now.getDay() === 0) {
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    // 检查是否已经包含了明天的数据
-    const hasTomorrowSunrise = futureItems.some(item => {
-      const itemDate = new Date(Number(item.fields.datetime));
-      return itemDate.toDateString() === tomorrow.toDateString() && item.fields.type === '日出';
-    });
-    
-    const hasTomorrowSunset = futureItems.some(item => {
-      const itemDate = new Date(Number(item.fields.datetime));
-      return itemDate.toDateString() === tomorrow.toDateString() && item.fields.type === '日落';
     });
 
-    // 如果缺少任何一个，从原始数据中查找并添加
-    if (!hasTomorrowSunrise || !hasTomorrowSunset) {
-      items.forEach(item => {
-        const itemDate = new Date(Number(item.fields.datetime));
-        if (itemDate.toDateString() === tomorrow.toDateString()) {
-          if (!hasTomorrowSunrise && item.fields.type === '日出') {
-            futureItems.push(item);
-          }
-          if (!hasTomorrowSunset && item.fields.type === '日落') {
-            futureItems.push(item);
-          }
-        }
-      });
-    }
-  }
+  // 5. 分离历史和未来数据（使用之前定义的 now）
+  const futureItems = sortedItems
+    .filter(item => new Date(Number(item.fields.datetime)) > now)
+    .slice(0, 4);  // 只显示未来4条数据
+
+  console.log('最终数据:', {
+    总条数: sortedItems.length,
+    未来数据条数: futureItems.length,
+    示例: futureItems.map(item => ({
+      日期: new Date(Number(item.fields.datetime)).toLocaleString(),
+      类型: item.fields.type,
+      更新时间: new Date(Number(item.fields.updatetime)).toLocaleString()
+    }))
+  });
 
   return (
     <div className="bg-white shadow-lg rounded-lg p-6">
@@ -300,6 +371,4 @@ const LatestData: React.FC = () => {
       </div>
     </div>
   );
-}
-
-export default LatestData 
+} 
