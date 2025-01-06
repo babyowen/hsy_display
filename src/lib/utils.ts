@@ -13,10 +13,10 @@ export function cn(...classes: string[]) {
   return classes.filter(Boolean).join(' ');
 }
 
-export const fetcher = async (url: string) => {
-  const res = await fetch(url)
-  if (!res.ok) {
-    throw new Error('An error occurred while fetching the data.')
+export async function fetcher<T>(url: string): Promise<T> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
   }
-  return res.json()
+  return response.json();
 } 
