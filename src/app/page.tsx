@@ -39,7 +39,7 @@ export default function Home() {
           rel="noopener noreferrer"
           className="hover:text-gray-700"
         >
-          苏ICP备08105700号-1
+          苏ICP备08105700号-2
         </a>
       </footer>
     </main>

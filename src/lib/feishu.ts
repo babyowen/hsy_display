@@ -15,7 +15,7 @@ export function getFeishuClient() {
   return new Client({
     appId: process.env.FEISHU_APP_ID,
     appSecret: process.env.FEISHU_APP_SECRET,
-    disableTokenCache: true,
+    disableTokenCache: false,
     logger: {
       info: () => {},
       warn: () => {},

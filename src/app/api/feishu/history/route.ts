@@ -7,7 +7,7 @@ function createClient() {
   return new Client({
     appId: process.env.FEISHU_APP_ID,
     appSecret: process.env.FEISHU_APP_SECRET,
-    disableTokenCache: true,
+    disableTokenCache: false,
     logger: {
       info: () => {},
       warn: () => {},
@@ -18,35 +18,8 @@ function createClient() {
   });
 }
 
-async function getTenantToken() {
-  try {
-    const response = await fetch('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        "app_id": process.env.FEISHU_APP_ID,
-        "app_secret": process.env.FEISHU_APP_SECRET
-      })
-    });
-
-    const data = await response.json();
-    
-    if (data.code === 0) {
-      return data.tenant_access_token;
-    } else {
-      throw new Error(`Failed to get tenant token: ${data.msg}`);
-    }
-  } catch (error) {
-    console.error('Error getting tenant token:', error);
-    throw error;
-  }
-}
-
 export async function GET() {
   try {
-    const tenantToken = await getTenantToken();
     const client = createClient();
 
     const requestParams = {
@@ -77,11 +50,7 @@ export async function GET() {
       }
     };
 
-    const response = await client.bitable.appTableRecord.search(requestParams, {
-      headers: {
-        'Authorization': `Bearer ${tenantToken}`
-      }
-    }) as FeishuResponse;
+    const response = await client.bitable.appTableRecord.search(requestParams) as FeishuResponse;
 
     if (!response || !response.data) {
       return NextResponse.json<{

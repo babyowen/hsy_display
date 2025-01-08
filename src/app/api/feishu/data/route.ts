@@ -7,7 +7,7 @@ function createClient() {
   return new Client({
     appId: process.env.FEISHU_APP_ID,
     appSecret: process.env.FEISHU_APP_SECRET,
-    disableTokenCache: true,
+    disableTokenCache: false,
     logger: {
       info: () => {},
       warn: () => {},
@@ -16,37 +16,6 @@ function createClient() {
       trace: () => {}
     }
   });
-}
-
-async function getTenantToken() {
-  try {
-    console.log('\n=== 🔑 获取飞书访问令牌 ===')
-    console.log('认证信息:', {
-      应用ID: process.env.FEISHU_APP_ID?.slice(0, 8) + '...',
-      密钥: '已加密'
-    })
-    
-    const response = await fetch('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        "app_id": process.env.FEISHU_APP_ID,
-        "app_secret": process.env.FEISHU_APP_SECRET
-      })
-    });
-
-    const data = await response.json();
-    
-    if (data.code === 0) {
-      console.log('✅ 令牌获取成功')
-      return data.tenant_access_token;
-    } else {
-      throw new Error(`获取访问令牌失败: ${data.msg}`);
-    }
-  } catch (error) {
-    console.error('❌ 令牌获取失败:', error);
-    throw error;
-  }
 }
 
 // 定义一个类型来表示处理后的数据
@@ -62,15 +31,11 @@ export async function GET() {
     console.log('时间:', new Date().toLocaleString('zh-CN'))
     console.log('==========================================\n')
     
-    // 2. 获取访问令牌
-    console.log('\n=== 🔑 获取访问令牌 ===')
-    const tenantToken = await getTenantToken();
-    
-    // 3. 初始化客户端
+    // 2. 初始化客户端
     const client = createClient();
     console.log('✅ 客户端初始化完成')
 
-    // 4. 构建并执行预测数据查询
+    // 3. 构建并执行预测数据查询
     console.log('\n=== 📈 预测数据处理 ===')
     console.log('1️⃣ 构建查询参数...')
     const requestParams = {
@@ -113,14 +78,10 @@ export async function GET() {
     });
 
     console.log('\n2️⃣ 执行数据查询...')
-    const response = await client.bitable.appTableRecord.search(requestParams, {
-      headers: {
-        'Authorization': `Bearer ${tenantToken}`
-      }
-    }) as FeishuResponse;
+    const response = await client.bitable.appTableRecord.search(requestParams) as FeishuResponse;
     console.log('✅ 数据查询完成')
 
-    // 5. 处理预测数据
+    // 4. 处理预测数据
     if (response.data?.items) {
       console.log('\n3️⃣ 处理查询结果...')
       console.log('原始数据统计:', {
@@ -134,7 +95,7 @@ export async function GET() {
       });
       console.log('✅ 原始数据处理完成')
 
-      // 6. 数据去重
+      // 5. 数据去重
       console.log('\n4️⃣ 数据去重处理...')
       const processedData = response.data.items.reduce<ProcessedDataMap>((acc, item) => {
         const key = `${item.fields.datetime}_${item.fields.type}`
@@ -152,7 +113,7 @@ export async function GET() {
       });
       console.log('✅ 数据去重完成')
 
-      // 7. 输出最终的预测数据结果
+      // 6. 输出最终的预测数据结果
       console.log('\n5️⃣ 预测数据最终结果...')
       
       // 使用类型谓词进行过滤
@@ -160,16 +121,36 @@ export async function GET() {
         return item.fields.type === '日出' || item.fields.type === '日落';
       });
 
-      console.log('数据统计:', {
-        数据分布: {
-          日出记录: filteredItems.filter(item => item.fields.type === '日出').length,
-          日落记录: filteredItems.filter(item => item.fields.type === '日落').length
-        }
+      // 过滤掉已过期的数据
+      const now = new Date();
+      const validItems = filteredItems.filter(item => {
+        const itemDate = new Date(item.fields.datetime);
+        return itemDate > now;
       });
+
+      console.log('\n数据处理详细统计:');
+      console.log('1. 原始数据统计:');
+      console.log(`   • 日出记录数: ${filteredItems.filter(item => item.fields.type === '日出').length}`);
+      console.log(`   • 日落记录数: ${filteredItems.filter(item => item.fields.type === '日落').length}`);
+      console.log('   • 具体数据:');
+      filteredItems.forEach(item => {
+        const date = new Date(item.fields.datetime);
+        console.log(`     - ${date.toLocaleString('zh-CN')} | ${item.fields.type}`);
+      });
+
+      console.log('\n2. 有效数据统计 (过滤掉已过期数据):');
+      console.log(`   • 日出记录数: ${validItems.filter(item => item.fields.type === '日出').length}`);
+      console.log(`   • 日落记录数: ${validItems.filter(item => item.fields.type === '日落').length}`);
+      console.log('   • 具体数据:');
+      validItems.forEach(item => {
+        const date = new Date(item.fields.datetime);
+        console.log(`     - ${date.toLocaleString('zh-CN')} | ${item.fields.type}`);
+      });
+
       console.log('✅ 预测数据处理完成')
 
-      // 6. 获取历史数据
-      console.log('\n=== 📊 历史数据处理 ===')
+      // 7. 获取历史数据
+      console.log('\n===📊 历史数据处理 ===')
       try {
         console.log('1️⃣ 构建历史查询参数...')
         const historyRequestParams = {
@@ -208,14 +189,10 @@ export async function GET() {
         });
 
         console.log('\n2️⃣ 执行历史数据查询...')
-        const historyResponse = await client.bitable.appTableRecord.search(historyRequestParams, {
-          headers: {
-            'Authorization': `Bearer ${tenantToken}`
-          }
-        }) as FeishuResponse;
+        const historyResponse = await client.bitable.appTableRecord.search(historyRequestParams) as FeishuResponse;
         console.log('✅ 历史数据查询完成')
 
-        // 7. 处理历史数据
+        // 8. 处理历史数据
         if (historyResponse.data?.items) {
           console.log('\n3️⃣ 处理历史数据...')
           
@@ -248,7 +225,7 @@ export async function GET() {
           });
           console.log('✅ 历史数据处理完成')
 
-          // 8. 历史数据统计
+          // 9. 历史数据统计
           console.log('\n4️⃣ 历史数据统计...')
           
           // 使用类型谓词进行过滤
