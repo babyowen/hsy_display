@@ -71,43 +71,51 @@ export default function DataTable({ data, title }: DataTableProps) {
         <History className="w-7 h-7 text-blue-500" />
         <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
       </div>
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">时间</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">类型</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">火烧云指数</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">火烧云评价</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">气溶胶指数</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">空气质量</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {tableData.map((item: ProcessedDataItem, index: number) => (
-              <tr key={index} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {format(item.datetime, 'MM-dd HH:mm', { locale: zhCN })}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {item.type}
-                </td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm ${getHsyszColor(item.hsysz)}`}>
-                  {item.hsysz}
-                </td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm ${getHsyszColor(item.hsysz)}`}>
-                  {item.hsypj}
-                </td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm ${getQrjszColor(item.qrjsz)}`}>
-                  {item.qrjsz}
-                </td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm ${getQrjszColor(item.qrjsz)}`}>
-                  {item.kqzl}
-                </td>
+      <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="w-[15%] px-4 py-3.5 text-center text-sm font-semibold text-gray-900">时间</th>
+                <th className="w-[10%] px-4 py-3.5 text-center text-sm font-semibold text-gray-900">类型</th>
+                <th className="w-[15%] px-4 py-3.5 text-center text-sm font-semibold text-gray-900">火烧云指数</th>
+                <th className="w-[25%] px-4 py-3.5 text-center text-sm font-semibold text-gray-900">火烧云评价</th>
+                <th className="w-[15%] px-4 py-3.5 text-center text-sm font-semibold text-gray-900">气溶胶指数</th>
+                <th className="w-[20%] px-4 py-3.5 text-center text-sm font-semibold text-gray-900">空气质量</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-200 bg-white">
+              {tableData.map((item: ProcessedDataItem, index: number) => (
+                <tr 
+                  key={index} 
+                  className={`
+                    transition-colors hover:bg-gray-50/50
+                    ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}
+                  `}
+                >
+                  <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-gray-600">
+                    {format(item.datetime, 'MM-dd HH:mm', { locale: zhCN })}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-center text-sm font-medium text-gray-700">
+                    {item.type}
+                  </td>
+                  <td className={`whitespace-nowrap px-4 py-3 text-center text-sm font-medium ${getHsyszColor(item.hsysz)}`}>
+                    {item.hsysz}
+                  </td>
+                  <td className={`whitespace-nowrap px-4 py-3 text-center text-sm ${getHsyszColor(item.hsysz)}`}>
+                    {item.hsypj}
+                  </td>
+                  <td className={`whitespace-nowrap px-4 py-3 text-center text-sm font-medium ${getQrjszColor(item.qrjsz)}`}>
+                    {item.qrjsz}
+                  </td>
+                  <td className={`whitespace-nowrap px-4 py-3 text-center text-sm ${getQrjszColor(item.qrjsz)}`}>
+                    {item.kqzl}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )
