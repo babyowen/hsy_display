@@ -45,6 +45,7 @@ export default function LatestData() {
   // 只在组件挂载时获取一次数据
   useEffect(() => {
     mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // 添加空依赖数组，只在挂载时执行一次
 
   // 获取最新的更新时间
