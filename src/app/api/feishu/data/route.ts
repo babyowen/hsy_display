@@ -1,6 +1,18 @@
 import { Client } from '@larksuiteoapi/node-sdk'
 import type { FeishuResponse } from '@/lib/types'
 
+// 创建一个简单的内存缓存
+let cache: {
+  data: FeishuResponse | null;
+  timestamp: number;
+} = {
+  data: null,
+  timestamp: 0
+};
+
+// 缓存有效期（5分钟）
+const CACHE_TTL = 5 * 60 * 1000;
+
 // 创建一个函数来初始化客户端
 function createClient() {
   return new Client({
@@ -24,6 +36,23 @@ type ProcessedDataMap = {
 
 export async function GET() {
   try {
+    // 检查缓存是否有效
+    const now = Date.now();
+    if (cache.data && (now - cache.timestamp) < CACHE_TTL) {
+      // 只在剩余时间大于4分钟或小于1分钟时输出日志
+      const remainingSeconds = Math.round((CACHE_TTL - (now - cache.timestamp)) / 1000);
+      if (remainingSeconds > 240 || remainingSeconds < 60) {
+        console.log('\n使用缓存数据，剩余有效期：', remainingSeconds, '秒');
+      }
+      return new Response(JSON.stringify({ data: cache.data }), {
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store, must-revalidate',
+          'Expires': '0',
+        },
+      });
+    }
+
     // 1. 开始请求
     console.log('\n==========================================')
     console.log('🌟 新的数据请求开始 🌟')
@@ -149,7 +178,12 @@ export async function GET() {
       console.log('✅ 预测数据处理完成')
     }
 
-    // 返回响应，添加缓存控制头
+    // 在返回响应前更新缓存
+    cache = {
+      data: response,
+      timestamp: now
+    };
+
     return new Response(JSON.stringify({ data: response }), {
       headers: {
         'Content-Type': 'application/json',
