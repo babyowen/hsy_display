@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server'
 import { Client } from '@larksuiteoapi/node-sdk'
 import type { FeishuResponse } from '@/lib/types'
 
@@ -148,111 +147,16 @@ export async function GET() {
       });
 
       console.log('✅ 预测数据处理完成')
-
-      // 7. 获取历史数据
-      console.log('\n===📊 历史数据处理 ===')
-      try {
-        console.log('1️⃣ 构建历史查询参数...')
-        const historyRequestParams = {
-          path: {
-            app_token: process.env.FEISHU_APP_TOKEN!,
-            table_id: process.env.TABLE_ID!,
-          },
-          data: {
-            view_id: process.env.VIEW_ID,
-            page_size: 100,
-            field_names: ['datetime', 'type', 'hsysz', 'hsypj', 'qrjsz', 'kqzl', 'updatetime'],
-            filter: {
-              conjunction: 'and' as const,
-              conditions: [
-                {
-                  field_name: 'datetime',
-                  operator: 'is' as const,
-                  value: ['CurrentWeek']
-                }
-              ]
-            },
-            sort: [
-              {
-                field_name: 'datetime',
-                order: 'desc' as const
-              }
-            ]
-          }
-        };
-
-        console.log('历史数据查询参数:', {
-          数据范围: '本周数据',
-          过滤条件: '本周',
-          排序方式: '按时间降序',
-          每页数量: historyRequestParams.data.page_size
-        });
-
-        console.log('\n2️⃣ 执行历史数据查询...')
-        const historyResponse = await client.bitable.appTableRecord.search(historyRequestParams) as FeishuResponse;
-        console.log('✅ 历史数据查询完成')
-
-        // 8. 处理历史数据
-        if (historyResponse.data?.items) {
-          console.log('\n3️⃣ 处理历史数据...')
-          
-          // 过滤掉今天的数据
-          const today = new Date().toDateString();
-          const historicalItems = historyResponse.data.items.filter(item => 
-            new Date(item.fields.datetime).toDateString() !== today
-          );
-          
-          console.log('过滤当天数据:', {
-            查询总数: historyResponse.data.items.length,
-            过滤后数量: historicalItems.length,
-            已过滤数量: historyResponse.data.items.length - historicalItems.length
-          });
-
-          // 数据去重
-          const processedHistoryData = historicalItems.reduce<ProcessedDataMap>((acc, item) => {
-            const key = `${item.fields.datetime}_${item.fields.type}`
-            if (!acc[key] || new Date(acc[key].fields.updatetime).getTime() < new Date(item.fields.updatetime).getTime()) {
-              acc[key] = item
-            }
-            return acc
-          }, {});
-
-          const historyItems = Object.values(processedHistoryData);
-          console.log('历史数据处理结果:', {
-            原始记录总数: historicalItems.length,
-            去重后记录数: historyItems.length,
-            重复数据数量: historicalItems.length - historyItems.length
-          });
-          console.log('✅ 历史数据处理完成')
-
-          // 9. 历史数据统计
-          console.log('\n4️⃣ 历史数据统计...')
-          
-          // 使用类型谓词进行过滤
-          const filteredHistoryItems = historyItems.filter((item): item is FeishuResponse['data']['items'][0] => {
-            return item.fields.type === '日出' || item.fields.type === '日落';
-          });
-
-          console.log('历史数据统计:', {
-            数据分布: {
-              日出记录: filteredHistoryItems.filter(item => item.fields.type === '日出').length,
-              日落记录: filteredHistoryItems.filter(item => item.fields.type === '日落').length
-            }
-          });
-          console.log('✅ 历史数据统计完成')
-        }
-      } catch (historyError: unknown) {
-        console.error('\n❌ 历史数据处理失败:', {
-          错误类型: historyError instanceof Error ? historyError.name : '未知错误',
-          错误信息: historyError instanceof Error ? historyError.message : String(historyError),
-          详细信息: (historyError as { response?: { data: unknown } })?.response?.data || '无详细信息'
-        });
-      }
     }
 
-    return NextResponse.json<{
-      data: FeishuResponse;
-    }>({ data: response });
+    // 返回响应，添加缓存控制头
+    return new Response(JSON.stringify({ data: response }), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store, must-revalidate',
+        'Expires': '0',
+      },
+    });
   } catch (error: unknown) {
     console.error('\n❌ 处理失败:', {
       步骤: '数据查询',
@@ -260,15 +164,21 @@ export async function GET() {
       错误信息: error instanceof Error ? error.message : String(error),
       详细信息: (error as { response?: { data: unknown } })?.response?.data || '无详细信息'
     });
-    return NextResponse.json<{
-      error: string;
-      details: string;
-    }>({ 
-      error: '获取数据失败', 
-      details: error instanceof Error ? error.message : String(error) 
-    }, { 
-      status: 500 
-    });
+    
+    return new Response(
+      JSON.stringify({ 
+        error: '获取数据失败',
+        details: error instanceof Error ? error.message : String(error)
+      }), 
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store, must-revalidate',
+          'Expires': '0',
+        },
+      }
+    );
   } finally {
     console.log('\n==========================================')
     console.log('🏁 请求处理结束 🏁')

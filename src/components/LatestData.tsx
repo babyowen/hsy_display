@@ -1,4 +1,5 @@
 'use client'
+import React, { useEffect } from 'react'
 import { SunMedium, Sunrise, Sunset, CloudSun, Wind } from 'lucide-react'
 import useSWR from 'swr'
 import { fetcher } from '@/lib/utils'
@@ -32,9 +33,30 @@ function getQrjszColor(value: string): string {
 }
 
 export default function LatestData() {
-  const { data: response, error } = useSWR<{
+  const { data: response, error, mutate } = useSWR<{
     data: FeishuResponse
-  }>('/api/feishu/data', fetcher)
+  }>('/api/feishu/data', fetcher, {
+    refreshInterval: 5 * 60 * 1000, // 每5分钟刷新一次
+    revalidateOnFocus: true, // 当用户重新关注页面时重新验证
+  })
+
+  // 添加日期变更检查
+  useEffect(() => {
+    // 获取当前时间
+    const now = new Date()
+    // 计算到明天0点的毫秒数
+    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+    const msUntilTomorrow = tomorrow.getTime() - now.getTime()
+
+    // 设置定时器，在日期变更时刷新数据
+    const timer = setTimeout(() => {
+      console.log('日期已变更，刷新数据...')
+      mutate() // 强制刷新数据
+    }, msUntilTomorrow)
+
+    // 清理定时器
+    return () => clearTimeout(timer)
+  }, [mutate])
 
   if (error) return <div className="text-red-500">加载失败</div>
   if (!response) return (
