@@ -1,17 +1,14 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import './globals.css'
 
-const inter = Inter({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  display: 'swap',
-  variable: '--font-inter',
-})
-
 export const metadata: Metadata = {
-  title: '南京火烧云监测',
-  description: '南京火烧云和空气质量观测数据',
+  title: '南京火烧云',
+  description: '南京火烧云预测',
+  other: {
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
+  }
 }
 
 export default function RootLayout({
@@ -20,8 +17,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="zh-CN">
-      <body className={`${inter.className} antialiased`}>{children}</body>
+    <html lang="zh">
+      <body className="antialiased">{children}</body>
     </html>
   )
 }
