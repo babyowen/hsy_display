@@ -22,13 +22,13 @@ export default function Home() {
       <div className="container mx-auto px-4 sm:px-8 lg:px-16 py-8 space-y-8">
         <LatestData />
         {isLoading ? (
-          <div>加载历史数据中...</div>
+          <div>加载本周历史数据中...</div>
         ) : error ? (
-          <div>加载历史数据失败: {error.message}</div>
+          <div>加载本周历史数据失败: {error.message}</div>
         ) : data ? (
-          <DataTable data={data} title="历史数据" />
+          <DataTable data={data} title="本周历史" />
         ) : (
-          <div>暂无历史数据</div>
+          <div>暂无本周历史数据</div>
         )}
         <Description />
       </div>

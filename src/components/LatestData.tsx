@@ -34,12 +34,14 @@ function getQrjszColor(value: string): string {
 
 export default function LatestData() {
   const { data: response, error, mutate, isValidating } = useSWR<{
-    data: FeishuResponse
+    data: {
+      items: FeishuResponse['data']['items']
+    }
   }>('/api/feishu/data', fetcher, {
-    refreshInterval: 0, // 禁用自动刷新
-    revalidateOnFocus: true, // 当用户重新关注页面时重新验证
-    revalidateOnMount: true, // 组件挂载时重新验证
-    dedupingInterval: 0, // 禁用请求去重
+    refreshInterval: 0,
+    revalidateOnFocus: true,
+    revalidateOnMount: true,
+    dedupingInterval: 0,
   })
 
   // 只在组件挂载时获取一次数据
@@ -58,10 +60,13 @@ export default function LatestData() {
 
   // 处理数据
   const processData = () => {
-    if (!response?.data?.data?.items) return null;
+    if (!response?.data?.items) {
+      return null;
+    }
 
-    const processedData = response.data.data.items.reduce((acc: { [key: string]: ProcessedData }, item: FeishuResponse['data']['items'][0]) => {
+    const processedData = response.data.items.reduce((acc: { [key: string]: ProcessedData }, item: FeishuResponse['data']['items'][0]) => {
       const key = `${item.fields.datetime}_${item.fields.type}`
+
       if (!acc[key] || new Date(acc[key].updatetime).getTime() < new Date(item.fields.updatetime).getTime()) {
         acc[key] = {
           datetime: new Date(item.fields.datetime).getTime(),
@@ -76,9 +81,13 @@ export default function LatestData() {
       return acc
     }, {})
 
-    return Object.values(processedData)
-      .filter(item => item.datetime > Date.now())
+    const filteredData = Object.values(processedData)
+      .filter(item => {
+        return item.datetime > Date.now();
+      })
       .sort((a, b) => a.datetime - b.datetime);
+
+    return filteredData;
   }
 
   const sortedData = processData();
@@ -89,9 +98,9 @@ export default function LatestData() {
         <div className="flex items-center gap-2">
           <CloudSun className="w-7 h-7 text-blue-500" />
           <h2 className="text-2xl font-semibold text-gray-800">近日预测</h2>
-          {response?.data?.data?.items && (
+          {response?.data?.items && (
             <span className="text-sm text-gray-500 ml-2">
-              更新时间: {getLatestUpdateTime(response.data.data.items)?.toLocaleString('zh-CN', {
+              更新时间: {getLatestUpdateTime(response.data.items)?.toLocaleString('zh-CN', {
                 month: 'numeric',
                 day: 'numeric',
                 hour: 'numeric',
