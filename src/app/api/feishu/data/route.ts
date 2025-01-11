@@ -16,6 +16,17 @@ export async function GET() {
   try {
     // 1. 获取配置和初始化客户端
     const config = getFeishuConfig()
+    
+    // 验证配置是否有效
+    if (!config.appId || !config.appSecret || !config.appToken || !config.tableId || !config.viewId) {
+      console.log(`[${sessionId}] 近日预测 | ❌ 配置无效: 环境变量未设置`)
+      return NextResponse.json({
+        data: {
+          items: []
+        }
+      }, { status: 500 })
+    }
+
     const client = new Client({
       appId: config.appId,
       appSecret: config.appSecret,
