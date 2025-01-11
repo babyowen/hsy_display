@@ -1,92 +1,75 @@
 import { NextResponse } from 'next/server'
-import { Client } from '@larksuiteoapi/node-sdk'
-import type { FeishuResponse } from '@/lib/types'
+import { getFeishuConfig } from '@/lib/env'
 
-// 创建一个函数来初始化客户端
-function createClient() {
-  return new Client({
-    appId: process.env.FEISHU_APP_ID,
-    appSecret: process.env.FEISHU_APP_SECRET,
-    disableTokenCache: false,
-    logger: {
-      info: () => {},
-      warn: () => {},
-      error: () => {},
-      debug: () => {},
-      trace: () => {}
-    }
-  });
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { Client } = require('@larksuiteoapi/node-sdk')
+
+interface FeishuError {
+  message: string;
+  code?: string;
 }
 
 export async function GET() {
-  try {
-    const client = createClient();
+  const sessionId = Math.random().toString(36).substring(7)
+  console.log(`\n[${sessionId}] 本周历史 | 开始查询`)
 
-    const requestParams = {
+  try {
+    // 1. 获取配置和初始化客户端
+    const config = getFeishuConfig()
+    const client = new Client({
+      appId: config.appId,
+      appSecret: config.appSecret,
+      disableTokenCache: false
+    })
+
+    // 2. 构建查询参数
+    const params = {
       path: {
-        app_token: process.env.FEISHU_APP_TOKEN!,
-        table_id: process.env.TABLE_ID!,
+        app_token: config.appToken,
+        table_id: config.tableId
       },
       data: {
-        view_id: process.env.VIEW_ID,
+        view_id: config.viewId,
         page_size: 100,
-        field_names: ['datetime', 'type', 'hsysz', 'hsypj', 'qrjsz', 'kqzl', 'updatetime'],
+        field_names: ["datetime", "type", "hsysz", "hsypj", "qrjsz", "kqzl", "updatetime"],
         filter: {
-          conjunction: 'and' as const,
+          conjunction: "and",
           conditions: [
             {
-              field_name: 'datetime',
-              operator: 'is' as const,
-              value: ['CurrentWeek']
+              field_name: "datetime",
+              operator: "is",
+              value: ["CurrentWeek"]
             }
           ]
         },
         sort: [
           {
-            field_name: 'datetime',
-            order: 'desc' as const
+            field_name: "datetime",
+            desc: true
           }
         ]
       }
-    };
-
-    const response = await client.bitable.appTableRecord.search(requestParams) as FeishuResponse;
-
-    if (!response || !response.data) {
-      return NextResponse.json<{
-        data: { items: [] }
-      }>({
-        data: {
-          items: []
-        }
-      });
     }
 
-    return NextResponse.json<{
+    // 3. 发送请求并获取数据
+    const response = await client.bitable.appTableRecord.search(params)
+    const totalRecords = response.data?.items?.length || 0
+    console.log(`[${sessionId}] 本周历史 | 查询完成：获取到 ${totalRecords} 条记录\n`)
+
+    // 4. 返回响应
+    return NextResponse.json({ 
       data: {
-        items: FeishuResponse['data']['items']
+        items: response.data?.items || []
       }
-    }>({
-      data: {
-        items: response.data.items || []
-      }
-    });
+    })
+
   } catch (error: unknown) {
-    console.error('Feishu API Error:', error);
-    const errorResponse = error as { response?: { data: unknown } };
-    if (errorResponse.response?.data) {
-      console.error('Error Response Data:', errorResponse.response.data);
-    }
-    return NextResponse.json<{
-      error: string;
-      details: string;
-      errorData?: unknown;
-    }>({ 
-      error: '获取数据失败', 
-      details: error instanceof Error ? error.message : String(error),
-      errorData: errorResponse.response?.data
-    }, { 
-      status: 500 
-    });
+    const err = error as FeishuError
+    console.log(`[${sessionId}] 本周历史 | ❌ 查询失败: ${err.message}\n`)
+    return NextResponse.json({
+      data: {
+        items: []
+      }
+    }, { status: 500 })
   }
 } 

@@ -11,7 +11,7 @@ interface FeishuError {
 
 export async function GET() {
   const sessionId = Math.random().toString(36).substring(7)
-  console.log(`\n[${sessionId}] 近日预测 | 开始查询`)
+  console.log(`[${sessionId}] 步骤1: 开始测试查询`)
 
   try {
     // 1. 获取配置和初始化客户端
@@ -21,9 +21,10 @@ export async function GET() {
       appSecret: config.appSecret,
       disableTokenCache: false
     })
+    console.log(`[${sessionId}] 步骤2: 客户端初始化完成`)
 
     // 2. 构建查询参数
-    const params = {
+    const testParams = {
       path: {
         app_token: config.appToken,
         table_id: config.tableId
@@ -33,13 +34,8 @@ export async function GET() {
         page_size: 100,
         field_names: ["datetime", "type", "hsysz", "hsypj", "qrjsz", "kqzl", "updatetime"],
         filter: {
-          conjunction: "or",
+          conjunction: "and",
           conditions: [
-            {
-              field_name: "datetime",
-              operator: "is",
-              value: ["Today"]
-            },
             {
               field_name: "datetime",
               operator: "is",
@@ -55,11 +51,11 @@ export async function GET() {
         ]
       }
     }
+    console.log(`[${sessionId}] 步骤3: 查询参数准备完成`)
 
-    // 3. 发送请求并获取数据
-    const response = await client.bitable.appTableRecord.search(params)
-    const totalRecords = response.data?.items?.length || 0
-    console.log(`[${sessionId}] 近日预测 | 查询完成：获取到 ${totalRecords} 条记录\n`)
+    // 3. 发送请求
+    const response = await client.bitable.appTableRecord.search(testParams)
+    console.log(`[${sessionId}] 步骤4: 查询完成，获取到 ${response.data?.items?.length || 0} 条记录`)
 
     // 4. 返回响应
     return NextResponse.json({ 
@@ -70,7 +66,7 @@ export async function GET() {
 
   } catch (error: unknown) {
     const err = error as FeishuError
-    console.log(`[${sessionId}] 近日预测 | ❌ 查询失败: ${err.message}\n`)
+    console.log(`[${sessionId}] ❌ 查询失败: ${err.message}`)
     return NextResponse.json({
       data: {
         items: []

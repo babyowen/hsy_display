@@ -1,4 +1,5 @@
-import { Client } from '@larksuiteoapi/node-sdk'
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { Client } = require('@larksuiteoapi/node-sdk')
 import type { FeishuResponse } from './types'
 
 export interface SunsetData {

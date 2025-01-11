@@ -60,10 +60,16 @@ export default function DataTable({ data, title }: DataTableProps) {
     return acc
   }, {})
 
-  // 转换为数组并按时间倒序排列，只显示过去的数据
+  // 转换为数组并按时间排序
   const tableData = Object.values(processedData)
-    .filter((item: ProcessedDataItem) => item.datetime < Date.now())
-    .sort((a: ProcessedDataItem, b: ProcessedDataItem) => b.datetime - a.datetime)
+    .filter(item => {
+      if (title === "历史数据") {
+        // 历史数据显示过去的数据
+        return item.datetime < Date.now();
+      }
+      return true; // 其他情况显示所有数据
+    })
+    .sort((a: ProcessedDataItem, b: ProcessedDataItem) => b.datetime - a.datetime)  // 历史数据按时间倒序排列
 
   return (
     <div>
