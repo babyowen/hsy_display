@@ -1,4 +1,12 @@
-export function getFeishuConfig() {
+interface FeishuConfig {
+  appId: string;
+  appSecret: string;
+  appToken: string;
+  tableId: string;
+  viewId: string;
+}
+
+export function getFeishuConfig(): FeishuConfig {
   // 检查特定的环境变量
   const envVars = {
     FEISHU_APP_ID: process.env.FEISHU_APP_ID,
@@ -14,7 +22,7 @@ export function getFeishuConfig() {
     .map(([key]) => key)
 
   if (missingVars.length > 0) {
-    throw new Error(`缺少必需的环境变量: ${missingVars.join(', ')}`)
+    throw new Error(`环境变量缺失: ${missingVars.join(', ')}。请确保在 .env.local 文件中设置了所有必需的环境变量。`)
   }
 
   return {
