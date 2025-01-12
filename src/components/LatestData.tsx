@@ -81,13 +81,11 @@ export default function LatestData() {
       return acc
     }, {})
 
-    const filteredData = Object.values(processedData)
-      .filter(item => {
-        return item.datetime > Date.now();
-      })
+    // 数据已经在服务器端过滤，这里只需要排序
+    const sortedData = Object.values(processedData)
       .sort((a, b) => a.datetime - b.datetime);
 
-    return filteredData;
+    return sortedData;
   }
 
   const sortedData = processData();
