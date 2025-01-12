@@ -1,4 +1,5 @@
 'use client'
+export const dynamic = 'force-dynamic'
 import LatestData from '@/components/LatestData'
 import Description from '@/components/Description'
 import DataTable from '@/components/DataTable'
