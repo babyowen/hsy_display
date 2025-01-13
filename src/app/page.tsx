@@ -13,7 +13,12 @@ export default function Home() {
     data: {
       items: FeishuResponse['data']['items']
     }
-  }>('/api/feishu/history', fetcher)
+  }>('/api/feishu/history', fetcher, {
+    refreshInterval: 0,
+    revalidateOnFocus: true,
+    revalidateOnMount: true,
+    dedupingInterval: 0,
+  })
 
   return (
     <main className="min-h-screen bg-gray-50">
