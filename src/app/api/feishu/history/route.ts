@@ -21,6 +21,9 @@ interface FeishuItem {
   }
 }
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET() {
   const sessionId = Math.random().toString(36).substring(7)
   console.log(`\n[${sessionId}] 本周历史 | 开始查询`)

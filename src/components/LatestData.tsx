@@ -41,7 +41,7 @@ export default function LatestData() {
     refreshInterval: 0,
     revalidateOnFocus: true,
     revalidateOnMount: true,
-    dedupingInterval: 0,
+    dedupingInterval: 0
   })
 
   // 只在组件挂载时获取一次数据
@@ -99,10 +99,13 @@ export default function LatestData() {
           {response?.data?.items && (
             <span className="text-sm text-gray-500 ml-2">
               更新时间: {getLatestUpdateTime(response.data.items)?.toLocaleString('zh-CN', {
+                year: 'numeric',
                 month: 'numeric',
                 day: 'numeric',
                 hour: 'numeric',
-                minute: 'numeric'
+                minute: 'numeric',
+                second: 'numeric',
+                hour12: false
               })}
             </span>
           )}
