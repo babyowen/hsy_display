@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server'
+import * as Lark from '@larksuiteoapi/node-sdk'
 import { getFeishuConfig } from '@/lib/env'
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { Client } = require('@larksuiteoapi/node-sdk')
 
 interface FeishuError {
   message: string;
@@ -31,7 +29,7 @@ export async function GET() {
   try {
     // 1. 获取配置和初始化客户端
     const config = getFeishuConfig()
-    const client = new Client({
+    const client = new Lark.Client({
       appId: config.appId,
       appSecret: config.appSecret,
       disableTokenCache: false
@@ -64,7 +62,7 @@ export async function GET() {
           }
         ]
       }
-    }
+    } satisfies Lark.BitableRequestParams
 
     // 添加日志函数来格式化时间
     const formatDate = (timestamp: string | number) => {

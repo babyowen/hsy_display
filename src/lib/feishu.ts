@@ -1,5 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { Client } = require('@larksuiteoapi/node-sdk')
+import * as Lark from '@larksuiteoapi/node-sdk'
 import type { FeishuResponse } from './types'
 
 export interface SunsetData {
@@ -13,7 +12,7 @@ export interface SunsetData {
 }
 
 export function getFeishuClient() {
-  return new Client({
+  return new Lark.Client({
     appId: process.env.FEISHU_APP_ID,
     appSecret: process.env.FEISHU_APP_SECRET,
     disableTokenCache: false,
