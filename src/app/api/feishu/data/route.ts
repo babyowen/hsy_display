@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server'
+import * as Lark from '@larksuiteoapi/node-sdk'
 import { getFeishuConfig } from '@/lib/env'
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { Client } = require('@larksuiteoapi/node-sdk')
 
 interface FeishuError {
   message: string;
@@ -42,7 +40,7 @@ export async function GET() {
       }, { status: 500 })
     }
 
-    const client = new Client({
+    const client = new Lark.Client({
       appId: config.appId,
       appSecret: config.appSecret,
       disableTokenCache: false
@@ -80,7 +78,7 @@ export async function GET() {
           }
         ]
       }
-    }
+    } satisfies Lark.BitableRequestParams
 
     // 3. 发送请求并获取数据
     const response = await client.bitable.appTableRecord.search(params)

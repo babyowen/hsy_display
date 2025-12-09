@@ -1,5 +1,19 @@
 // 覆盖 SDK 的类型定义
 declare module '@larksuiteoapi/node-sdk' {
+  export class Client {
+    constructor(params: {
+      appId: string;
+      appSecret: string;
+      disableTokenCache?: boolean;
+      [key: string]: unknown;
+    });
+    bitable: {
+      appTableRecord: {
+        search: (params: BitableRequestParams) => Promise<any>;
+      };
+    };
+  }
+
   interface BitableRequestParams {
     path: {
       app_token: string;

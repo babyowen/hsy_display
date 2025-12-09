@@ -1,5 +1,5 @@
 'use client'
-import React, { useEffect } from 'react'
+import { useEffect } from 'react'
 import { SunMedium, Sunrise, Sunset, CloudSun, Wind } from 'lucide-react'
 import useSWR from 'swr'
 import { fetcher } from '@/lib/utils'
