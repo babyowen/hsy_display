@@ -1,8 +1,9 @@
 'use client'
 import { useEffect } from 'react'
-import { SunMedium, Sunrise, Sunset, CloudSun, Wind } from 'lucide-react'
+import { SunMedium, Sunrise, Sunset, Radar, Wind } from 'lucide-react'
 import useSWR from 'swr'
 import { fetcher } from '@/lib/utils'
+import { getHsyszColor, getQrjszColor } from '@/lib/colors'
 import type { FeishuResponse } from '@/lib/types'
 
 interface ProcessedData {
@@ -13,23 +14,6 @@ interface ProcessedData {
   qrjsz: string
   kqzl: string
   updatetime: string
-}
-
-// 获取火烧云指数的颜色
-function getHsyszColor(value: string): string {
-  const numValue = parseFloat(value)
-  if (numValue > 0.8) return 'text-red-500'
-  if (numValue > 0.2) return 'text-green-500'
-  return 'text-gray-400'
-}
-
-// 获取气溶胶指数的颜色
-function getQrjszColor(value: string): string {
-  const numValue = parseFloat(value)
-  if (numValue > 0.8) return 'text-black'
-  if (numValue > 0.4) return 'text-purple-500'
-  if (numValue > 0.2) return 'text-green-500'
-  return 'text-green-400'
 }
 
 export default function LatestData() {
@@ -56,7 +40,11 @@ export default function LatestData() {
     return new Date(Math.max(...items.map(item => new Date(item.fields.updatetime).getTime())));
   };
 
-  if (error) return <div className="text-red-500">加载失败</div>
+  if (error) return (
+    <div className="glass-panel rounded-xl p-4 text-sm text-red-400">
+      加载失败，请稍后重试
+    </div>
+  )
 
   // 处理数据
   const processData = () => {
@@ -92,13 +80,13 @@ export default function LatestData() {
 
   return (
     <div className="w-full space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <CloudSun className="w-7 h-7 text-blue-500" />
-          <h2 className="text-2xl font-semibold text-gray-800">近日预测</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Radar className="h-6 w-6 text-ember-400 animate-glow-pulse" />
+          <h2 className="text-2xl font-semibold tracking-wider text-white">近日预测</h2>
           {response?.data?.items && (
-            <span className="text-sm text-gray-500 ml-2">
-              更新时间: {getLatestUpdateTime(response.data.items)?.toLocaleString('zh-CN', {
+            <span className="font-mono-num text-xs tracking-wider text-slate-400">
+              数据更新 · {getLatestUpdateTime(response.data.items)?.toLocaleString('zh-CN', {
                 year: 'numeric',
                 month: 'numeric',
                 day: 'numeric',
@@ -111,42 +99,33 @@ export default function LatestData() {
           )}
         </div>
         {isValidating && (
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full" />
+          <div className="flex items-center gap-2 font-mono-num text-xs tracking-wider text-slate-400">
+            <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-ember-400 border-t-transparent" />
             读取数据中...
           </div>
         )}
       </div>
 
       {!response ? (
-        <div className="space-y-6 animate-pulse">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-blue-200 rounded-full" />
-            <div className="h-8 w-48 bg-gray-200 rounded" />
-            <div className="animate-fade-in-out text-gray-400 ml-2">
-              加载中...
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => (
-              <div 
-                key={i}
-                className="bg-white shadow-lg rounded-lg p-6 border border-gray-200"
-              >
-                <div className="space-y-4">
-                  <div className="h-4 bg-gray-200 rounded w-3/4" />
-                  <div className="h-6 bg-gray-200 rounded w-1/2" />
-                  <div className="space-y-2">
-                    <div className="h-4 bg-gray-200 rounded w-full" />
-                    <div className="h-4 bg-gray-200 rounded w-5/6" />
-                  </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <div
+              key={i}
+              className="glass-panel animate-pulse rounded-2xl p-6"
+            >
+              <div className="space-y-4">
+                <div className="h-4 w-3/4 rounded bg-white/10" />
+                <div className="h-10 w-1/2 rounded bg-white/10" />
+                <div className="space-y-2">
+                  <div className="h-4 w-full rounded bg-white/10" />
+                  <div className="h-4 w-5/6 rounded bg-white/10" />
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       ) : !sortedData || sortedData.length === 0 ? (
-        <div className="p-4 bg-yellow-50 text-yellow-600 rounded-lg">
+        <div className="glass-panel rounded-xl p-4 text-sm text-amber-300">
           暂无数据
         </div>
       ) : (
@@ -157,68 +136,95 @@ export default function LatestData() {
           ${sortedData.length === 3 ? 'grid-cols-1 md:grid-cols-3 max-w-6xl mx-auto' : ''}
           ${sortedData.length >= 4 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 w-full' : ''}
         `}>
-          {sortedData.map((item: ProcessedData) => (
-            <div 
-              key={`${item.datetime}_${item.type}`}
-              className="bg-white shadow-lg rounded-lg p-6 border border-gray-200 
-                hover:shadow-2xl hover:scale-[1.02] hover:border-blue-200 
-                transition-all duration-300 ease-in-out 
-                cursor-pointer
-                w-full"
-            >
-              {/* 事件时间显示 */}
-              <div className="mb-6">
-                <div className="text-sm text-gray-500">事件时间</div>
-                <div className="text-lg font-medium text-gray-800 flex items-center">
-                  {new Date(item.datetime).toLocaleString('zh-CN', {
-                    month: 'numeric',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: 'numeric'
-                  })}
-                  <span className="ml-2 inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-sm">
+          {sortedData.map((item: ProcessedData, index: number) => {
+            const hsyszNum = parseFloat(item.hsysz)
+            const qrjszNum = parseFloat(item.qrjsz)
+            // 火烧云量表按 0-2.5 量程，气溶胶按 0-1 量程
+            const hsyszPct = Number.isNaN(hsyszNum) ? 0 : Math.min(Math.max(hsyszNum / 2.5, 0), 1) * 100
+            const qrjszPct = Number.isNaN(qrjszNum) ? 0 : Math.min(Math.max(qrjszNum, 0), 1) * 100
+            return (
+              <div
+                key={`${item.datetime}_${item.type}`}
+                className="glass-panel group animate-rise relative w-full overflow-hidden rounded-2xl p-6
+                  transition-all duration-300 ease-out
+                  hover:-translate-y-1 hover:border-ember-500/40
+                  hover:shadow-[0_24px_60px_-20px_rgba(255,107,74,0.35)]"
+                style={{ animationDelay: `${index * 0.08}s` }}
+              >
+                {/* 悬停时顶部亮起的火烧云渐变线 */}
+                <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-ember-500/0 via-ember-500/80 to-ember-500/0 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+                {/* 事件时间显示 */}
+                <div className="mb-6 flex items-center justify-between">
+                  <div className="font-mono-num text-lg tracking-wider text-slate-200">
+                    {new Date(item.datetime).toLocaleString('zh-CN', {
+                      month: 'numeric',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: 'numeric'
+                    })}
+                  </div>
+                  <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs ${
+                    item.type === '日出'
+                      ? 'border-amber-400/40 bg-amber-400/10 text-amber-300'
+                      : 'border-rose-400/40 bg-rose-400/10 text-rose-300'
+                  }`}>
                     {item.type === '日出' ? (
-                      <Sunrise className="w-4 h-4 mr-1" />
+                      <Sunrise className="h-3.5 w-3.5" />
                     ) : (
-                      <Sunset className="w-4 h-4 mr-1" />
+                      <Sunset className="h-3.5 w-3.5" />
                     )}
                     {item.type}
                   </span>
                 </div>
-              </div>
 
-              {/* 主要数据显示 */}
-              <div className="space-y-6">
-                <div className="text-center">
-                  <div className="text-base font-semibold text-gray-700 mb-3 flex items-center justify-center">
-                    <SunMedium className="w-5 h-5 mr-1 text-orange-400" />
-                    火烧云指数
+                {/* 主要数据显示 */}
+                <div className="space-y-7">
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1.5 font-mono-num text-[11px] uppercase tracking-[0.25em] text-slate-400">
+                      <SunMedium className="h-4 w-4 text-ember-400" />
+                      火烧云指数
+                    </div>
+                    <div className={`mt-2 font-mono-num text-6xl font-semibold tracking-tight ${getHsyszColor(item.hsysz)} drop-shadow-[0_0_18px_rgba(255,107,74,0.3)]`}>
+                      {item.hsysz}
+                    </div>
+                    <div className={`mt-1.5 text-sm ${getHsyszColor(item.hsysz)}`}>
+                      {item.hsypj}
+                    </div>
+                    {/* 火烧云量表 */}
+                    <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-amber-400 via-ember-500 to-rose-500 transition-all duration-1000 ease-out"
+                        style={{ width: `${hsyszPct}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className={`text-5xl font-medium tracking-tight ${getHsyszColor(item.hsysz)}`}>
-                    {item.hsysz}
-                  </div>
-                  <div className={`text-sm mt-2 ${getHsyszColor(item.hsysz)}`}>
-                    {item.hsypj}
+
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1.5 font-mono-num text-[11px] uppercase tracking-[0.25em] text-slate-400">
+                      <Wind className="h-4 w-4 text-sky-400" />
+                      气溶胶指数
+                    </div>
+                    <div className={`mt-2 font-mono-num text-6xl font-semibold tracking-tight ${getQrjszColor(item.qrjsz)}`}>
+                      {item.qrjsz}
+                    </div>
+                    <div className={`mt-1.5 text-sm ${getQrjszColor(item.qrjsz)}`}>
+                      {item.kqzl}
+                    </div>
+                    {/* 气溶胶量表 */}
+                    <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-sky-400 to-violet-500 transition-all duration-1000 ease-out"
+                        style={{ width: `${qrjszPct}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
-
-                <div className="text-center">
-                  <div className="text-base font-semibold text-gray-700 mb-3 flex items-center justify-center">
-                    <Wind className="w-5 h-5 mr-1 text-blue-400" />
-                    气溶胶指数
-                  </div>
-                  <div className={`text-5xl font-medium tracking-tight ${getQrjszColor(item.qrjsz)}`}>
-                    {item.qrjsz}
-                  </div>
-                  <div className={`text-sm mt-2 ${getQrjszColor(item.qrjsz)}`}>
-                    {item.kqzl}
-                  </div>
-                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
   )
-} 
+}

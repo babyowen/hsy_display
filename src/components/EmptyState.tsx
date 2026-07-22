@@ -4,8 +4,8 @@ interface EmptyStateProps {
 
 export default function EmptyState({ message }: EmptyStateProps) {
   return (
-    <div className="p-4 bg-yellow-50 text-yellow-600 rounded-lg">
+    <div className="glass-panel rounded-xl p-4 text-sm text-amber-300">
       {message}
     </div>
   );
-} 
+}

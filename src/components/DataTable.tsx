@@ -1,24 +1,9 @@
 'use client'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import { History } from 'lucide-react'
+import { History, Sunrise, Sunset } from 'lucide-react'
+import { getHsyszColor, getQrjszColor } from '@/lib/colors'
 import type { FeishuResponse } from '@/lib/types'
-
-// 复用颜色判断函数
-function getHsyszColor(value: string): string {
-  const numValue = parseFloat(value)
-  if (numValue > 0.8) return 'text-red-500'
-  if (numValue > 0.2) return 'text-green-500'
-  return 'text-gray-400'
-}
-
-function getQrjszColor(value: string): string {
-  const numValue = parseFloat(value)
-  if (numValue > 0.8) return 'text-black'
-  if (numValue > 0.4) return 'text-purple-500'
-  if (numValue > 0.2) return 'text-green-500'
-  return 'text-green-400'
-}
 
 // 定义数据类型
 interface ProcessedDataItem {
@@ -45,7 +30,7 @@ export default function DataTable({ data, title }: DataTableProps) {
   const processedData = data.data.items.reduce<{ [key: string]: ProcessedDataItem }>((acc, item) => {
     const datetime = new Date(item.fields.datetime).getTime()
     const key = `${datetime}_${item.fields.type}`
-    
+
     if (!acc[key] || new Date(acc[key].updatetime).getTime() < new Date(item.fields.updatetime).getTime()) {
       acc[key] = {
         datetime,
@@ -66,45 +51,56 @@ export default function DataTable({ data, title }: DataTableProps) {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-4">
-        <History className="w-7 h-7 text-blue-500" />
-        <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
+      <div className="mb-4 flex items-center gap-3">
+        <History className="h-6 w-6 text-ember-400" />
+        <h2 className="text-2xl font-semibold tracking-wider text-white">{title}</h2>
+        <span className="font-mono-num text-xs tracking-wider text-slate-500">
+          {tableData.length} 条记录
+        </span>
       </div>
-      <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm">
+      <div className="glass-panel overflow-hidden rounded-2xl">
         <div className="overflow-x-auto">
-          <table className="w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="w-full divide-y divide-white/5">
+            <thead className="bg-white/5">
               <tr>
-                <th className="w-[15%] px-4 py-3.5 text-center text-sm font-semibold text-gray-900">时间</th>
-                <th className="w-[10%] px-4 py-3.5 text-center text-sm font-semibold text-gray-900">类型</th>
-                <th className="w-[15%] px-4 py-3.5 text-center text-sm font-semibold text-gray-900">火烧云指数</th>
-                <th className="w-[25%] px-4 py-3.5 text-center text-sm font-semibold text-gray-900">火烧云评价</th>
-                <th className="w-[15%] px-4 py-3.5 text-center text-sm font-semibold text-gray-900">气溶胶指数</th>
-                <th className="w-[20%] px-4 py-3.5 text-center text-sm font-semibold text-gray-900">空气质量</th>
+                <th className="w-[15%] px-4 py-3.5 text-center font-mono-num text-xs font-medium uppercase tracking-[0.2em] text-slate-400">时间</th>
+                <th className="w-[10%] px-4 py-3.5 text-center font-mono-num text-xs font-medium uppercase tracking-[0.2em] text-slate-400">类型</th>
+                <th className="w-[15%] px-4 py-3.5 text-center font-mono-num text-xs font-medium uppercase tracking-[0.2em] text-slate-400">火烧云指数</th>
+                <th className="w-[25%] px-4 py-3.5 text-center font-mono-num text-xs font-medium uppercase tracking-[0.2em] text-slate-400">火烧云评价</th>
+                <th className="w-[15%] px-4 py-3.5 text-center font-mono-num text-xs font-medium uppercase tracking-[0.2em] text-slate-400">气溶胶指数</th>
+                <th className="w-[20%] px-4 py-3.5 text-center font-mono-num text-xs font-medium uppercase tracking-[0.2em] text-slate-400">空气质量</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
+            <tbody className="divide-y divide-white/5">
               {tableData.map((item: ProcessedDataItem, index: number) => (
-                <tr 
-                  key={index} 
-                  className={`
-                    transition-colors hover:bg-gray-50/50
-                    ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}
-                  `}
+                <tr
+                  key={index}
+                  className="transition-colors duration-200 hover:bg-ember-500/5"
                 >
-                  <td className="whitespace-nowrap px-4 py-3 text-center text-sm text-gray-600">
+                  <td className="whitespace-nowrap px-4 py-3 text-center font-mono-num text-sm tracking-wider text-slate-300">
                     {format(item.datetime, 'MM-dd HH:mm', { locale: zhCN })}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-center text-sm font-medium text-gray-700">
-                    {item.type}
+                  <td className="whitespace-nowrap px-4 py-3 text-center text-sm">
+                    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${
+                      item.type === '日出'
+                        ? 'border-amber-400/40 bg-amber-400/10 text-amber-300'
+                        : 'border-rose-400/40 bg-rose-400/10 text-rose-300'
+                    }`}>
+                      {item.type === '日出' ? (
+                        <Sunrise className="h-3 w-3" />
+                      ) : (
+                        <Sunset className="h-3 w-3" />
+                      )}
+                      {item.type}
+                    </span>
                   </td>
-                  <td className={`whitespace-nowrap px-4 py-3 text-center text-sm font-medium ${getHsyszColor(item.hsysz)}`}>
+                  <td className={`whitespace-nowrap px-4 py-3 text-center font-mono-num text-sm font-semibold ${getHsyszColor(item.hsysz)}`}>
                     {item.hsysz}
                   </td>
                   <td className={`whitespace-nowrap px-4 py-3 text-center text-sm ${getHsyszColor(item.hsysz)}`}>
                     {item.hsypj}
                   </td>
-                  <td className={`whitespace-nowrap px-4 py-3 text-center text-sm font-medium ${getQrjszColor(item.qrjsz)}`}>
+                  <td className={`whitespace-nowrap px-4 py-3 text-center font-mono-num text-sm font-semibold ${getQrjszColor(item.qrjsz)}`}>
                     {item.qrjsz}
                   </td>
                   <td className={`whitespace-nowrap px-4 py-3 text-center text-sm ${getQrjszColor(item.qrjsz)}`}>
@@ -118,4 +114,4 @@ export default function DataTable({ data, title }: DataTableProps) {
       </div>
     </div>
   )
-} 
+}

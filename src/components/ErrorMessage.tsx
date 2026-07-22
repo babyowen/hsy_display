@@ -4,8 +4,8 @@ interface ErrorMessageProps {
 
 export default function ErrorMessage({ message }: ErrorMessageProps) {
   return (
-    <div className="p-4 bg-red-50 text-red-500 rounded-lg">
+    <div className="glass-panel rounded-xl border-red-500/30 p-4 text-sm text-red-400">
       {message}
     </div>
   );
-} 
+}
